@@ -479,8 +479,8 @@ textarea.fi{resize:vertical;min-height:78px}
 // ═══════════════════════════════════════════════════════
 // CONFIG — reemplazar con sus credenciales de Supabase
 // ═══════════════════════════════════════════════════════
-const SB_URL = 'https://YOUR_PROJECT.supabase.co';
-const SB_KEY = 'YOUR_ANON_KEY';
+const SB_URL = 'https://qzpgqmcnluperbivnpku.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cGdxbWNubHVwZXJiaXZucGt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5MjQ4NDUsImV4cCI6MjA5NDUwMDg0NX0.V0KnX_v2n2VcDWdNYmowo4Xmg_fGNQ1xL5u6tYGl9Tc';
 
 // PINs de acceso (admin puede cambiarlos desde el panel)
 const PINS_DEFAULT = { admin: '000000', gerencia: '000000' };
@@ -686,7 +686,7 @@ function renderColabView(p){
 // ═══════════════════════════════════════════════════════
 async function loadFromSB(){
   if(!sb) return;
-  setSyncStatus('syncing','Cargando…');
+  setSyncStatus('syncing','Cargando...');
   try{
     const [rt, rp] = await Promise.all([
       sb.from('jc_tareas').select('*').order('id'),
@@ -708,7 +708,7 @@ async function loadFromSB(){
 
 async function saveTareaSB(t){
   if(!sb) return;
-  setSyncStatus('syncing','Guardando…');
+  setSyncStatus('syncing','Guardando...');
   try{
     const {error}=await sb.from('jc_tareas').upsert({...t}, {onConflict:'id'});
     if(!error) setSyncStatus('ok','Guardado');
@@ -729,7 +729,7 @@ async function delPersonaSB(id){
 }
 async function forceSyncAll(){
   if(!sb){toast('Sin conexión Supabase','err');return;}
-  setSyncStatus('syncing','Sincronizando todo…');
+  setSyncStatus('syncing','Sincronizando todo...');
   try{
     const tp=tareas.map(t=>({...t}));
     const pp=personas.map(p=>({...p,empresas:JSON.stringify(p.empresas)}));
@@ -1081,7 +1081,7 @@ function openNuevaTarea(prefill){
       </div>
       <div class="fg" style="position:relative">
         <label class="fl">Responsable</label>
-        <input class="fi" id="f-resp" value="${t.responsable||''}" placeholder="Escriba nombre…" autocomplete="off">
+        <input class="fi" id="f-resp" value="${t.responsable||''}" placeholder="Escriba nombre..." autocomplete="off">
         <div class="aclist" id="f-resp-list"></div>
       </div>
     </div>
@@ -1111,7 +1111,7 @@ function openNuevaTarea(prefill){
     </div>`:''}
     <div class="fg">
       <label class="fl">Anotaciones</label>
-      <input class="fi" id="f-nota" value="${t.nota||''}" placeholder="Observaciones adicionales…">
+      <input class="fi" id="f-nota" value="${t.nota||''}" placeholder="Observaciones adicionales...">
     </div>`;
   document.getElementById('mfoot').innerHTML=`
     <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -1146,15 +1146,13 @@ function saveTarea(id){
 
 function marcarCumplida(id){
   const t=tareas.find(x=>x.id===id); if(!t) return;
-  if(!confirm('¿Marcar como finalizada?
-
-'+((t.tarea||'').slice(0,80)+'…'))) return;
+  if(!confirm('Marcar como finalizada?\n\n'+(t.tarea||'').slice(0,80))) return;
   t.estado='FINALIZADA'; t.cumplimiento='OK';
   lsS('jc_t',tareas); saveTareaSB(t); applyFilters(); toast('Tarea finalizada ✓','ok');
 }
 
 function delTarea(id){
-  if(!confirm('¿Eliminar esta tarea?')) return;
+  if(!confirm('Eliminar esta tarea?')) return;
   tareas=tareas.filter(x=>x.id!==id);
   lsS('jc_t',tareas); delTareaSB(id); applyFilters(); toast('Tarea eliminada');
 }
@@ -1176,7 +1174,7 @@ function aplazarTarea(id){
     </div>
     <div class="fg" style="margin-top:10px">
       <label class="fl">Motivo del aplazamiento</label>
-      <textarea class="fi" id="ap-m" rows="3" placeholder="Razón del aplazamiento…"></textarea>
+      <textarea class="fi" id="ap-m" rows="3" placeholder="Razón del aplazamiento..."></textarea>
     </div>`;
   document.getElementById('mfoot').innerHTML=`
     <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -1299,11 +1297,7 @@ function savePersona(id){
     obj={id:Date.now(),nombre,cargo,empresas,pin,activo:true};
     personas.push(obj);
     toast('PIN asignado: '+pin+' — anótelo antes de cerrar','ok');
-    setTimeout(()=>alert('PIN generado para '+nombre+':
-
-'+pin+'
-
-Comuníqueselo al colaborador.'),400);
+    setTimeout(()=>alert('PIN generado para '+nombre+':\n\n'+pin+'\n\nComuníqueselo al colaborador.'),400);
   }
   lsS('jc_p',personas);
   if(obj) savePersonaSB(obj);
@@ -1311,7 +1305,7 @@ Comuníqueselo al colaborador.'),400);
 }
 function editPersona(id){const p=personas.find(x=>x.id===id);if(p)openNuevaPersona(p);}
 function delPersona(id){
-  if(!confirm('¿Eliminar este colaborador?')) return;
+  if(!confirm('Eliminar este colaborador?')) return;
   personas=personas.filter(p=>p.id!==id);
   lsS('jc_p',personas); delPersonaSB(id); renderColabs(); toast('Colaborador eliminado');
 }
@@ -1365,9 +1359,7 @@ function saveColabPin(id){
   lsS('jc_p',personas); savePersonaSB(personas[i]);
   closeModal();
   toast('Nuevo PIN: '+newPin+' — comuníqueselo al colaborador','ok');
-  setTimeout(()=>alert('PIN actualizado para '+personas[i].nombre+':
-
-'+newPin),400);
+  setTimeout(()=>alert('PIN actualizado para '+personas[i].nombre+':\n\n'+newPin),400);
   renderColabs();
 }
 
@@ -1381,7 +1373,7 @@ function exportJSON(){
   a.download='backup_gerencia_'+new Date().toISOString().split('T')[0]+'.json'; a.click();
 }
 function resetToHistorico(){
-  if(!confirm('¿Restaurar el histórico original? Esto sobreescribirá los datos locales.')) return;
+  if(!confirm('Restaurar el historico original? Esto sobreescribira los datos locales.')) return;
   tareas=JSON.parse(JSON.stringify(HISTORICO_TAREAS));
   personas=JSON.parse(JSON.stringify(HISTORICO_PERSONAS));
   lsS('jc_t',tareas); lsS('jc_p',personas);
