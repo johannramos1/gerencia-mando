@@ -379,7 +379,7 @@ textarea.fi{resize:vertical;min-height:78px}
         <p style="font-size:12px;color:var(--txt3)">
           PIN Gerencia: <span id="pin-ger-show" style="font-family:monospace;background:var(--surf3);padding:2px 8px;border-radius:4px;letter-spacing:2px">------</span>
           <button class="btn" style="font-size:11px;padding:3px 8px;margin-left:6px" onclick="toggleShowPin('ger')">Ver</button>
-          <button class="btn" style="font-size:11px;padding:3px 8px" onclick="changePinDialog('ger')">Cambiar</button>
+          <button class="btn" style="font-size:11px;padding:3px 8px" onclick="changePinDialog('gerencia')">Cambiar</button>
         </p>
       </div>
       <div class="adm-sec">
@@ -935,7 +935,7 @@ function delPersona(id){
 // PIN MANAGEMENT
 var _pinWho=null;
 function changePinDialog(who){
-  _pinWho=who;
+  _pinWho=(who==='ger'?'gerencia':who);
   var label=who==='admin'?'Admin':'Gerencia (Dra. Jenifer Cleves)';
   document.getElementById('mtitle').textContent='Cambiar PIN - '+label;
   var body=document.getElementById('mbody');
@@ -958,8 +958,9 @@ function savePin(who){
   pins[who]=p1;lsS('jc_pins',pins);savePinsSB();closeModal();toast('PIN actualizado y sincronizado','ok');
 }
 function toggleShowPin(who){
+  var key=who==='ger'?'gerencia':who;
   var el=document.getElementById('pin-'+who+'-show');if(!el)return;
-  el.textContent=el.textContent.indexOf('-')>=0?pins[who]:'------';
+  el.textContent=el.textContent.indexOf('-')>=0?(pins[key]||'------'):'------';
 }
 function changePinColab(id){
   var p=personas.find(function(x){return x.id===id;});if(!p)return;
