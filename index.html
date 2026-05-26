@@ -285,6 +285,7 @@ textarea.fi{resize:vertical;min-height:78px}
       </div>
       <button class="btn-login" onclick="tryAdminLogin()">Ingresar</button>
       <div class="login-err" id="admin-err"></div>
+      <div id="debug-info" style="font-size:10px;color:#999;margin-top:12px;text-align:center"></div>
     </div>
 
     <!-- Colaborador -->
@@ -473,13 +474,13 @@ textarea.fi{resize:vertical;min-height:78px}
 
 <div id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" async defer></script>
 <script>
 // ═══════════════════════════════════════════════════════
 // CONFIG — reemplazar con sus credenciales de Supabase
 // ═══════════════════════════════════════════════════════
-const SB_URL = 'https://qzpgqmcnluperbivnpku.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cGdxbWNubHVwZXJiaXZucGt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5MjQ4NDUsImV4cCI6MjA5NDUwMDg0NX0.V0KnX_v2n2VcDWdNYmowo4Xmg_fGNQ1xL5u6tYGl9Tc';
+const SB_URL = 'https://YOUR_PROJECT.supabase.co';
+const SB_KEY = 'YOUR_ANON_KEY';
 
 // PINs de acceso (admin puede cambiarlos desde el panel)
 const PINS_DEFAULT = { admin: '000000', gerencia: '000000' };
@@ -503,25 +504,42 @@ const DATA_VER = 'jcv4';
 let sb = null;
 function initSB(){
   try{
-    if(window.supabase && typeof window.supabase.createClient==='function' && SB_URL.includes('supabase.co')){
+    if(SB_URL.includes('YOUR_PROJECT')||SB_KEY.includes('YOUR_ANON')){
+      setSyncStatus('warn','Supabase no configurado — modo local');
+      return;
+    }
+    if(window.supabase && typeof window.supabase.createClient==='function'){
       sb = window.supabase.createClient(SB_URL, SB_KEY);
       setSyncStatus('ok','Conectado');
+    } else {
+      setTimeout(initSB, 1000);
     }
   }catch(e){ setSyncStatus('err','Sin conexión'); }
 }
 
 function setSyncStatus(s,t){
-  const d=document.getElementById('sync-dot'), tx=document.getElementById('sync-txt');
-  if(!d||!tx) return;
-  d.className='sync-dot'+(s==='syncing'?' syncing':s==='err'?' err':'');
-  tx.textContent=t;
+  try{
+    const d=document.getElementById('sync-dot'), tx=document.getElementById('sync-txt');
+    if(!d||!tx) return;
+    d.className='sync-dot'+(s==='syncing'?' syncing':s==='err'?' err':'');
+    tx.textContent=t;
+  }catch(e){}
 }
 
 // ═══════════════════════════════════════════════════════
 // LOCAL STORAGE
 // ═══════════════════════════════════════════════════════
-function lsG(k,def){try{const v=localStorage.getItem(k);if(localStorage.getItem('jcver')!==DATA_VER)return null;return v?JSON.parse(v):def;}catch(e){return def;}}
-function lsS(k,v){try{localStorage.setItem(k,JSON.stringify(v));localStorage.setItem('jcver',DATA_VER);}catch(e){}}
+function lsG(k,def){
+  try{
+    const ver=localStorage.getItem('jcver');
+    if(ver!==DATA_VER){ localStorage.removeItem(k); return null; }
+    const v=localStorage.getItem(k);
+    return v?JSON.parse(v):def;
+  }catch(e){return def;}
+}
+function lsS(k,v){
+  try{localStorage.setItem(k,JSON.stringify(v));localStorage.setItem('jcver',DATA_VER);}catch(e){}
+}
 
 // ═══════════════════════════════════════════════════════
 // STATE
@@ -529,6 +547,11 @@ function lsS(k,v){try{localStorage.setItem(k,JSON.stringify(v));localStorage.set
 let tareas = lsG('jc_t',null); if(!tareas){tareas=JSON.parse(JSON.stringify(HISTORICO_TAREAS));lsS('jc_t',tareas);}
 let personas = lsG('jc_p',null); if(!personas){personas=JSON.parse(JSON.stringify(HISTORICO_PERSONAS));lsS('jc_p',personas);}
 let pins = lsG('jc_pins',null)||{...PINS_DEFAULT};
+// Debug info
+(function(){
+  const el=document.getElementById('debug-info');
+  if(el) el.textContent='v'+DATA_VER+' · '+tareas.length+' tareas · PIN admin: '+(pins&&pins.admin?pins.admin.length+' dígitos':'?');
+})();
 let filtIPS='TODOS', filtEst='todos', curView='activas';
 let calY,calM,calSel=null,calTgt=null;
 let curRole=null, curUser=null;
@@ -543,11 +566,23 @@ function setLoginTab(t){
 }
 
 function tryAdminLogin(){
-  const pin=document.getElementById('admin-pin').value.trim();
-  const err=document.getElementById('admin-err');
-  if(pin===pins.admin){enterApp('admin','Johann Ramos');}
-  else if(pin===pins.gerencia){enterApp('gerencia','Dra. Jenifer Cleves');}
-  else{err.textContent='PIN incorrecto. Intente de nuevo.'; document.getElementById('admin-pin').value='';}
+  try{
+    const pinEl=document.getElementById('admin-pin');
+    const pin=(pinEl?pinEl.value:'').trim();
+    const err=document.getElementById('admin-err');
+    const pAdmin=pins&&pins.admin?pins.admin:'000000';
+    const pGer=pins&&pins.gerencia?pins.gerencia:'000000';
+    if(pin===pAdmin){enterApp('admin','Johann Ramos');}
+    else if(pin===pGer){enterApp('gerencia','Dra. Jenifer Cleves');}
+    else{
+      if(err) err.textContent='PIN incorrecto (ingresó: '+pin.length+' dígitos). Intente de nuevo.';
+      if(pinEl) pinEl.value='';
+      if(pinEl) pinEl.focus();
+    }
+  }catch(e){
+    const err=document.getElementById('admin-err');
+    if(err) err.textContent='Error: '+e.message;
+  }
 }
 
 function tryColabLogin(){
