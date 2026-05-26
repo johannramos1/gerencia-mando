@@ -678,6 +678,341 @@ function renderAct(list){
   document.getElementById('cnt-act').textContent=list.length+' tareas';
   var tb=document.getElementById('tb-act');
   if(!list.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--txt3)">Sin tareas activas</td></tr>';return;}
-  tb.innerHTML=list.map(function(t){ var dr=diasR(t.plazo); var dCls=dr===null?'d-none':dr<0?'d-venc':dr<=3?'d-urg':'d-ok'; var dTxt=dr===null?'-':dr<0?Math.abs(dr)+'d venc.':dr===0?'Hoy':dr+'d'; var ap=t.aplazamientos||0; var bg=avBg(t.responsable||''); return'<tr>'+ '<td><span class="ib '+iCls(t.ips)+'">'+ipsShort(t.ips)+'</span></td>'+ '<td><div style="display:flex;align-items:center;gap:6px"><span class="av" style="background:'+bg+'">'+initials(t.responsable||'')+'</span><div><div style="font-size:12px;font-weight:500">'+(t.responsable||'-')+'</div><div style="font-size:10px;color:var(--txt3)">'+(t.cargo||'')+'</div></div></div></td>'+ '<td><span class="tarea-cell" onclick="verTarea('+t.id+')"><span class="tarea-prev">'+(t.tarea||'-')+'</span></span></td>'+\n '<td style="font-size:11px;color:var(--txt3);white-space:nowrap">'+fDate(t.fecha)+'</td>'+\n '<td style="font-size:11px;white-space:nowrap">'+fDate(t.plazo)+'</td>'+\n '<td><span class="db '+dCls+'">'+dTxt+'</span></td>'+\n '<td>'+stBadge(t.estado)+'</td>'+\n '<td style="text-align:center">'+(ap>0?'<span class="aplz-n">'+ap+'x</span>':'-')+'</td>'+\n '<td><div class="ra">'+\n '<button class="ib2 done" title="Marcar cumplida" onclick="marcarCumplida('+t.id+')" style="font-size:16px">&#10003;</button>'+\n '<button class="ib2" title="Editar" onclick="editTarea('+t.id+')" style="font-size:13px">&#9998;</button>'+\n '<button class="ib2 aplz" title="Aplazar" onclick="aplazarTarea('+t.id+')" style="font-size:13px">&#128197;</button>'+\n '<button class="ib2" title="WhatsApp" onclick="exportWA('+t.id+')" style="font-size:12px;font-weight:600;color:var(--ok)">WA</button>'+\n '<button class="ib2 del" title="Eliminar" onclick="delTarea('+t.id+')" style="font-size:16px">&#215;</button>'+\n '</div></td>'+\n '</tr>';\n }).join('');\n}\nfunction renderFin(list){\n  document.getElementById('cnt-fin').textContent=list.length+' tareas';\n  var tb=document.getElementById('tb-fin');\n  if(!list.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--txt3)">Sin resultados</td></tr>';return;}\n  tb.innerHTML=list.map(function(t){\n    var bg=avBg(t.responsable||'');\n    return'<tr>'+\n      '<td><span class="ib '+iCls(t.ips)+'">'+ipsShort(t.ips)+'</span></td>'+\n      '<td><div style="display:flex;align-items:center;gap:6px"><span class="av" style="background:'+bg+'">'+initials(t.responsable||'')+'</span><span style="font-size:12px">'+(t.responsable||'-')+'</span></div></td>'+\n      '<td style="font-size:12.5px">'+(t.tarea||'-')+'</td>'+\n      '<td style="font-size:11px;color:var(--txt3);white-space:nowrap">'+fDate(t.fecha)+'</td>'+\n      '<td style="font-size:11px;white-space:nowrap">'+fDate(t.plazo)+'</td>'+\n      '<td>'+stBadge(t.estado)+'</td>'+\n      '<td><button class="ib2" onclick="exportWA('+t.id+')" style="font-size:12px;font-weight:600;color:var(--ok)">WA</button></td>'+\n    '</tr>';\n  }).join('');\n}\n\n// VIEWS\nfunction showView(v){\n  document.querySelectorAll('.view').forEach(function(el){el.classList.remove('active');});\n  document.querySelectorAll('.sb-item').forEach(function(el){el.classList.remove('active');});\n  document.getElementById('view-'+v).classList.add('active');\n  var ni=document.getElementById('nav-'+v);if(ni)ni.classList.add('active');\n  var titles={activas:'Directrices en proceso',finalizadas:'Historial de tareas',colaboradores:'Colaboradores',admin:'Administracion'};\n  document.getElementById('tb-title').textContent=titles[v]||v;\n  if(v==='colaboradores')renderColabs();\n}\n\n// COLABORADORES\nfunction renderColabs(){\n  var c=document.getElementById('colab-list');\n  var grupos={};\n  EMPRESAS.forEach(function(e){grupos[e]=[];});\n  personas.forEach(function(p){(p.empresas||[]).forEach(function(e){if(grupos[e])grupos[e].push(p);});});\n  var html='';\n  EMPRESAS.forEach(function(emp){\n    var lista=grupos[emp]||[];if(!lista.length)return;\n    var sorted=lista.slice().sort(function(a,b){return(a.cargo||'').localeCompare(b.cargo||'')||a.nombre.localeCompare(b.nombre);});\n    html+='<div class="emp-sec"><div class="emp-title">'+emp+' <span style="font-size:11px;font-weight:400;opacity:.7">'+lista.length+' colaboradores</span></div>'+\n    sorted.map(function(p){\n      var bg=avBg(p.nombre);\n      var tags=(p.empresas||[]).map(function(e){return'<span class="ib '+iCls(e)+'" style="font-size:9px">'+ipsShort(e)+'</span>';}).join('');\n      var vis=pinVisible[p.id];\n      var isAdm=curRole==='admin';\n      return'<div class="p-row">'+\n        '<span class="av" style="background:'+bg+';width:32px;height:32px;font-size:11px">'+initials(p.nombre)+'</span>'+\n        '<div class="p-info"><div class="p-name">'+p.nombre+'</div><div class="p-cargo">'+(p.cargo||'-')+'</div><div class="p-tags">'+tags+'</div></div>'+\n        (isAdm?'<div style="display:flex;align-items:center;gap:6px">'+\n          '<span class="p-pin" onclick="togglePinVis('+p.id+')" title="Click para ver/ocultar PIN">'+(vis?p.pin:'------')+'</span>'+\n          '<button class="ib2" onclick="changePinColab('+p.id+')" title="Cambiar PIN" style="font-size:11px;font-weight:600">PIN</button>'+\n        '</div>':'')+\n        '<div style="display:flex;gap:3px;margin-left:'+(isAdm?'0':'auto')+'">'+\n          '<button class="ib2" onclick="editPersona('+p.id+')" style="font-size:13px">&#9998;</button>'+\n          '<button class="ib2 del" onclick="delPersona('+p.id+')" style="font-size:16px">&#215;</button>'+\n        '</div>'+\n      '</div>';\n    }).join('')+'</div>';\n  });\n  c.innerHTML=html||'<p style="color:var(--txt3);padding:20px">Sin colaboradores</p>';\n}\nfunction togglePinVis(id){pinVisible[id]=!pinVisible[id];renderColabs();}\n\n// CALENDAR\nfunction initCal(tgtId,val){calTgt=tgtId;var d=val?new Date(val+'T12:00:00'):new Date();calY=d.getFullYear();calM=d.getMonth();calSel=val?new Date(val+'T12:00:00'):null;renderCal();}\nfunction renderCal(){\n  var c=document.getElementById('cal-'+calTgt);if(!c)return;\n  var first=new Date(calY,calM,1),last=new Date(calY,calM+1,0);\n  var dow=first.getDay()-1;if(dow<0)dow=6;\n  var today=new Date();today.setHours(0,0,0,0);\n  var DOWS=['L','M','X','J','V','S','D'];\n  var cells=DOWS.map(function(d){return'<div class="cal-dow">'+d+'</div>';}).join('');\n  for(var i=0;i<dow;i++)cells+='<div class="cal-day emp"></div>';\n  for(var d=1;d<=last.getDate();d++){\n    var dt=new Date(calY,calM,d);\n    var isT=dt.getTime()===today.getTime();\n    var isS=calSel&&dt.toDateString()===calSel.toDateString();\n    var wk=dt.getDay()===0||dt.getDay()===6;\n    cells+='<div class="cal-day'+(isT?' tod':'')+(isS?' sel':'')+(wk&&!isS?' wknd':'')+'" onclick="calPick('+d+')">'+d+'</div>';\n  }\n  c.innerHTML='<div class="cal"><div class="cal-hd"><button class="cal-nav" onclick="calMov(-1)">&#8249;</button><span class="cal-ml">'+MESES[calM]+' '+calY+'</span><button class="cal-nav" onclick="calMov(1)">&#8250;</button></div><div class="cal-grid">'+cells+'</div><div class="cal-sel-txt">'+(calSel?fDate(calSel.toISOString().split('T')[0]):'')+'</div></div>';\n}\nfunction calMov(d){calM+=d;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}renderCal();}\nfunction calPick(d){calSel=new Date(calY,calM,d);var iso=calSel.toISOString().split('T')[0];var inp=document.getElementById(calTgt);if(inp){inp.value=iso;inp.dispatchEvent(new Event('change'));}renderCal();}\n\n// AUTOCOMPLETE\nfunction setupAC(inpId,lstId){\n  var inp=document.getElementById(inpId),lst=document.getElementById(lstId);if(!inp||!lst)return;\n  inp.addEventListener('input',function(){\n    var q=inp.value.toLowerCase().trim();if(q.length<1){lst.style.display='none';return;}\n    var hits=personas.filter(function(p){return p.nombre.toLowerCase().indexOf(q)>=0;}).slice(0,8);\n    if(!hits.length){lst.style.display='none';return;}\n    lst.style.display='block';\n    var acItems=[];hits.forEach(function(p){acItems.push('<div class="acitem" data-pid="'+p.id+'"><div class="acname">'+p.nombre+'</div><div class="acsub">'+(p.cargo||'')+'</div></div>');});lst.innerHTML=acItems.join('');Array.from(lst.querySelectorAll('.acitem')).forEach(function(el){var pid=parseInt(el.getAttribute('data-pid'));el.onclick=function(){acSel(pid,inpId,lstId);};});\n  });\n  document.addEventListener('click',function(e){if(!inp.contains(e.target)&&!lst.contains(e.target))lst.style.display='none';});\n}\nfunction acSel(pid,inpId,lstId){\n  var p=personas.find(function(x){return x.id===pid;});if(!p)return;\n  var inp=document.getElementById(inpId);if(inp)inp.value=p.nombre;\n  var lst=document.getElementById(lstId);if(lst)lst.style.display='none';\n  var cEl=document.getElementById('f-cargo');if(cEl&&p.cargo)cEl.value=p.cargo;\n  if(p.empresas&&p.empresas.length===1){var el=document.getElementById('f-ips');if(el)el.value=p.empresas[0];}\n}\n\n// NUEVA/EDITAR TAREA\nfunction openNuevaTarea(prefill){\n  var t=prefill||{},isEdit=!!t.id;\n  document.getElementById('mtitle').textContent=isEdit?'Editar tarea':'Nueva directriz';\n  document.getElementById('mbody').innerHTML=\n    '<div class="fr c2" style="margin-bottom:13px">'+\n      '<div class="fg"><label class="fl">IPS</label><select class="fi" id="f-ips">'+EMPRESAS.map(function(e){return'<option value="'+e+'"'+(t.ips===e?' selected':'')+'>'+e+'</option>';}).join('')+'</select></div>'+\n      '<div class="fg" style="position:relative"><label class="fl">Responsable</label><input class="fi" id="f-resp" value="'+(t.responsable||'')+'" placeholder="Escriba nombre..." autocomplete="off"><div class="aclist" id="f-resp-list"></div></div>'+\n    '</div>'+\n    '<div class="fg" style="margin-bottom:13px"><label class="fl">Cargo (se autocompleta)</label><input class="fi" id="f-cargo" value="'+(t.cargo||'')+'" placeholder="Cargo del responsable"></div>'+\n    '<div class="fg" style="margin-bottom:13px"><label class="fl">Directriz / Tarea</label><textarea class="fi" id="f-tarea" rows="4">'+(t.tarea||'')+'</textarea></div>'+\n    '<div class="fr c2" style="margin-bottom:13px">'+\n      '<div class="fg"><label class="fl">Fecha de asignacion</label><input class="fi" id="f-fecha" type="date" value="'+(t.fecha||new Date().toISOString().split('T')[0])+'"><div id="cal-f-fecha"></div></div>'+\n      '<div class="fg"><label class="fl">Plazo de entrega</label><input class="fi" id="f-plazo" type="date" value="'+(t.plazo||'')+'"><div id="cal-f-plazo"></div></div>'+\n    '</div>'+\n    (isEdit?'<div class="fg" style="margin-bottom:13px"><label class="fl">Estado</label><select class="fi" id="f-est">'+ESTADOS_ACT.map(function(e){return'<option value="'+e+'"'+((t.estado||'PENDIENTE')===e?' selected':'')+'>'+e+'</option>';}).join('')+'<option value="FINALIZADA"'+(t.estado==='FINALIZADA'?' selected':'')+'>FINALIZADA</option></select></div>':'')+\n    '<div class="fg"><label class="fl">Anotaciones</label><input class="fi" id="f-nota" value="'+(t.nota||'')+'" placeholder="Observaciones adicionales..."></div>';\n  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="saveTarea('+(t.id||0)+')">'+(isEdit?'Actualizar':'Guardar')+'</button>';\n  openModal();setupAC('f-resp','f-resp-list');\n  setTimeout(function(){\n    var ff=document.getElementById('f-fecha');if(ff)ff.addEventListener('click',function(){initCal('f-fecha',this.value);});\n    var fp=document.getElementById('f-plazo');if(fp)fp.addEventListener('click',function(){initCal('f-plazo',this.value);});\n  },50);\n}\nfunction editTarea(id){var t=tareas.find(function(x){return x.id===id;});if(t)openNuevaTarea(t);}\nfunction saveTarea(id){\n  var ips=document.getElementById('f-ips').value;\n  var resp=document.getElementById('f-resp').value.trim();\n  var cargo=document.getElementById('f-cargo').value.trim();\n  var tarea=document.getElementById('f-tarea').value.trim();\n  var fecha=document.getElementById('f-fecha').value;\n  var plazo=document.getElementById('f-plazo').value;\n  var estado=document.getElementById('f-est')?document.getElementById('f-est').value:'PENDIENTE';\n  var nota=document.getElementById('f-nota').value.trim();\n  if(!tarea){alert('La tarea es obligatoria');return;}\n  var obj;\n  if(id){\n    var idx=tareas.findIndex(function(x){return x.id===id;});\n    if(idx>=0){tareas[idx]=Object.assign({},tareas[idx],{ips:ips,responsable:resp,cargo:cargo,tarea:tarea,fecha:fecha,plazo:plazo,estado:estado,nota:nota});obj=tareas[idx];}\n  } else {\n    obj={id:Date.now(),ips:ips,responsable:resp,cargo:cargo,tarea:tarea,fecha:fecha,plazo:plazo,estado:'PENDIENTE',nota:nota,cumplimiento:'',aplazamientos:0,fecha_nueva:'',hoja:'NUEVA',creado:new Date().toISOString()};\n    tareas.push(obj);\n  }\n  lsS('jc_t',tareas);if(obj)saveTareaSB(obj);closeModal();applyFilters();toast('Tarea guardada','ok');\n}\nfunction marcarCumplida(id){\n  var t=tareas.find(function(x){return x.id===id;});if(!t)return;\n  if(!confirm('Marcar como finalizada?'))return;\n  t.estado='FINALIZADA';t.cumplimiento='OK';lsS('jc_t',tareas);saveTareaSB(t);applyFilters();toast('Tarea finalizada','ok');\n}\nfunction delTarea(id){\n  if(!confirm('Eliminar esta tarea?'))return;\n  tareas=tareas.filter(function(x){return x.id!==id;});lsS('jc_t',tareas);delTareaSB(id);applyFilters();toast('Tarea eliminada');\n}\n\n// APLAZAR\nfunction aplazarTarea(id){\n  var t=tareas.find(function(x){return x.id===id;});if(!t)return;\n  var ap=(t.aplazamientos||0)+1;\n  document.getElementById('mtitle').textContent='Aplazar tarea - #'+ap;\n  document.getElementById('mbody').innerHTML=\n    '<div class="dtarea">'+(t.tarea||'')+'</div>'+\n    '<p style="font-size:12px;color:var(--txt3);margin-bottom:14px">Plazo actual: <strong>'+fDate(t.plazo)+'</strong> - Aplazamiento #'+ap+'</p>'+\n    '<div class="fg"><label class="fl">Nueva fecha de entrega</label><input class="fi" id="ap-f" type="date" value="'+(t.plazo||'')+'"><div id="cal-ap-f"></div></div>'+\n    '<div class="fg" style="margin-top:10px"><label class="fl">Motivo del aplazamiento</label><textarea class="fi" id="ap-m" rows="3" placeholder="Razon del aplazamiento..."></textarea></div>';\n  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn" style="background:var(--warn-lt);color:var(--warn);border-color:var(--warn)" onclick="confAplazar('+id+')">Confirmar aplazamiento</button>';\n  openModal();\n  setTimeout(function(){var af=document.getElementById('ap-f');if(af)af.addEventListener('click',function(){initCal('ap-f',this.value);});},50);\n}\nfunction confAplazar(id){\n  var f=document.getElementById('ap-f').value,m=document.getElementById('ap-m').value.trim();\n  if(!f){alert('Seleccione nueva fecha');return;}\n  var t=tareas.find(function(x){return x.id===id;});if(!t)return;\n  t.aplazamientos=(t.aplazamientos||0)+1;\n  var prev=t.nota?t.nota+' | ':'';\n  t.nota=prev+'Aplaz.'+t.aplazamientos+' ('+fDate(t.plazo)+'->'+fDate(f)+')'+(m?' - '+m:'');\n  t.plazo=f;t.estado='APLAZADO';lsS('jc_t',tareas);saveTareaSB(t);closeModal();applyFilters();toast('Tarea aplazada');\n}\n\n// VER TAREA\nfunction verTarea(id){\n  var t=tareas.find(function(x){return x.id===id;});if(!t)return;\n  var dr=diasR(t.plazo),dh=diasH(t.fecha,t.plazo);\n  var drTxt=dr===null?'-':dr<0?'<span style="color:var(--err)">'+Math.abs(dr)+' dias VENCIDA</span>':dr===0?'<span style="color:var(--warn)">Vence HOY</span>':'<span style="color:var(--ok)">'+dr+' dias restantes</span>';\n  document.getElementById('mtitle').textContent='Detalle de directriz';\n  document.getElementById('mbody').innerHTML=\n    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"><span class="ib '+iCls(t.ips)+'">'+(t.ips||'-')+'</span>'+stBadge(t.estado)+(t.aplazamientos>0?'<span class="aplz-n">'+t.aplazamientos+' aplaz.</span>':'')+'</div>'+\n    '<div class="dtarea">'+(t.tarea||'-')+'</div>'+\n    '<div class="dgrid">'+\n      '<div><div class="dl-lbl">Responsable</div><div class="dl-val" style="display:flex;align-items:center;gap:7px"><span class="av" style="background:'+avBg(t.responsable||'')+'">'+initials(t.responsable||'')+'</span>'+(t.responsable||'-')+'</div></div>'+\n      '<div><div class="dl-lbl">Cargo</div><div class="dl-val">'+(t.cargo||'-')+'</div></div>'+\n      '<div><div class="dl-lbl">Asignada</div><div class="dl-val">'+fDate(t.fecha)+'</div></div>'+\n      '<div><div class="dl-lbl">Plazo</div><div class="dl-val">'+fDate(t.plazo)+'</div></div>'+\n      '<div><div class="dl-lbl">Dias habiles</div><div class="dl-val">'+(dh!==null?dh+' dias':'-')+'</div></div>'+\n      '<div><div class="dl-lbl">Tiempo</div><div class="dl-val">'+drTxt+'</div></div>'+\n    '</div>'+\n    (t.nota?'<div style="padding:10px;background:var(--surf2);border-radius:var(--r);font-size:12px;color:var(--txt2);border-left:3px solid var(--bdr2)"><b>Anotaciones:</b> '+t.nota+'</div>':'');\n  document.getElementById('mfoot').innerHTML=\n    '<button class="btn" onclick="closeModal()">Cerrar</button>'+\n    '<button class="btn" onclick="closeModal();aplazarTarea('+id+')">Aplazar</button>'+\n    '<button class="btn" onclick="closeModal();exportWA('+id+')">WhatsApp</button>'+\n    (!esFin(t)?'<button class="btn suc" onclick="closeModal();marcarCumplida('+id+')">Finalizar</button>':'')+\n    '<button class="btn pri" onclick="closeModal();editTarea('+id+')">Editar</button>';\n  openModal();\n}\n\n// WHATSAPP\nfunction exportWA(id){\n  var t=tareas.find(function(x){return x.id===id;});if(!t)return;\n  var dh=diasH(t.fecha,t.plazo);\n  var p=pByName(t.responsable)||{};\n  var cargo=t.cargo||p.cargo||'';\n    var lines=['---','DIRECTRIZ DE GERENCIA','---','IPS: '+(t.ips||'-'),'Para: '+(t.responsable||'-')+(cargo?' - '+cargo:''),'---','TAREA ASIGNADA:',t.tarea||'-','---','Fecha de asignacion: '+fDate(t.fecha),'Plazo de entrega: '+(fDate(t.plazo)||'Por definir'),'Dias habiles: '+(dh!==null?dh+' dias':'-'),'---','Dra. Jenifer Cleves Grijalba','Gerencia General'];\n  var txt=lines.join('\n');\n  window._waTxt=txt;\n  document.getElementById('mtitle').textContent='Exportar para WhatsApp';\n  document.getElementById('mbody').innerHTML='<p style="font-size:12px;color:var(--txt3);margin-bottom:8px">Copie y pegue en WhatsApp:</p><div class="wa-box">'+txt.replace(/</g,'&lt;')+'</div>';\n  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cerrar</button><button class="btn pri" onclick="copyWA()">Copiar</button><span class="copy-ok" id="copy-ok">Copiado</span>';\n  openModal();\n}\nfunction copyWA(){navigator.clipboard.writeText(window._waTxt||'').then(function(){var ok=document.getElementById('copy-ok');if(ok){ok.style.display='inline';setTimeout(function(){ok.style.display='none';},2500);}});}\n\n// PERSONAS\nfunction openNuevaPersona(pref){\n  var p=pref||{},emps=p.empresas||[];\n  document.getElementById('mtitle').textContent=p.id?'Editar colaborador':'Nuevo colaborador';\n  document.getElementById('mbody').innerHTML=\n    '<div class="fr c2" style="margin-bottom:13px"><div class="fg"><label class="fl">Nombre completo</label><input class="fi" id="fp-n" value="'+(p.nombre||'')+'" placeholder="NOMBRE COMPLETO"></div><div class="fg"><label class="fl">Cargo / Area</label><input class="fi" id="fp-c" value="'+(p.cargo||'')+'" placeholder="Cargo"></div></div>'+\n    '<div class="fg"><label class="fl">Empresas asignadas</label><div class="echwrap">'+EMPRESAS.map(function(e){return'<label class="echk"><input type="checkbox" value="'+e+'" '+(emps.indexOf(e)>=0?'checked':'')+'>'+e+'</label>';}).join('')+'</div></div>';\n  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="savePersona('+(p.id||0)+')">'+(p.id?'Actualizar':'Guardar')+'</button>';\n  openModal();\n}\nfunction savePersona(id){\n  var nombre=document.getElementById('fp-n').value.trim().toUpperCase();\n  var cargo=document.getElementById('fp-c').value.trim();\n  var empresas=Array.from(document.querySelectorAll('#mbody input[type=checkbox]:checked')).map(function(b){return b.value;});\n  if(!nombre){alert('Nombre obligatorio');return;}if(!empresas.length){alert('Seleccione al menos una empresa');return;}\n  var obj;\n  if(id){var idx=personas.findIndex(function(p){return p.id===id;});if(idx>=0){personas[idx]=Object.assign({},personas[idx],{nombre:nombre,cargo:cargo,empresas:empresas});obj=personas[idx];}}\n  else{\n    var pin=String(Math.floor(100000+Math.random()*900000));\n    obj={id:Date.now(),nombre:nombre,cargo:cargo,empresas:empresas,pin:pin,activo:true};\n    personas.push(obj);\n    setTimeout(function(){alert('PIN generado para '+nombre+':\n\n'+pin+'\n\nComuniqueselo al colaborador.');},400);\n  }\n  lsS('jc_p',personas);if(obj)savePersonaSB(obj);closeModal();renderColabs();\n}\nfunction editPersona(id){var p=personas.find(function(x){return x.id===id;});if(p)openNuevaPersona(p);}\nfunction delPersona(id){\n  if(!confirm('Eliminar este colaborador?'))return;\n  personas=personas.filter(function(p){return p.id!==id;});lsS('jc_p',personas);delPersonaSB(id);renderColabs();toast('Colaborador eliminado');\n}\n\n// PIN MANAGEMENT\nfunction changePinDialog(who){\n  var label=who==='admin'?'Admin':'Gerencia (Dra. Jenifer Cleves)';\n  document.getElementById('mtitle').textContent='Cambiar PIN - '+label;\n  document.getElementById('mbody').innerHTML=\n    '<div class="fg"><label class="fl">Nuevo PIN (6 digitos)</label><input class="fi li-pin" id="np1" type="password" maxlength="6" placeholder="------" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>'+\n    '<div class="fg"><label class="fl">Confirmar PIN</label><input class="fi li-pin" id="np2" type="password" maxlength="6" placeholder="------" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>';\n  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="savePin(''+who+'')">Guardar PIN</button>';\n  openModal();\n}\nfunction savePin(who){\n  var p1=document.getElementById('np1').value,p2=document.getElementById('np2').value;\n  if(p1.length<4){alert('Minimo 4 digitos');return;}if(p1!==p2){alert('Los PINs no coinciden');return;}\n  pins[who]=p1;lsS('jc_pins',pins);savePinsSB();closeModal();toast('PIN actualizado y sincronizado','ok');\n}\nfunction toggleShowPin(who){\n  var el=document.getElementById('pin-'+who+'-show');if(!el)return;\n  el.textContent=el.textContent.indexOf('-')>=0?pins[who]:'------';\n}\nfunction changePinColab(id){\n  var p=personas.find(function(x){return x.id===id;});if(!p)return;\n  document.getElementById('mtitle').textContent='Cambiar PIN - '+p.nombre;\n  document.getElementById('mbody').innerHTML=\n    '<p style="font-size:12px;color:var(--txt3);margin-bottom:14px">PIN actual: <span style="font-family:monospace;background:var(--surf3);padding:2px 8px;border-radius:4px;letter-spacing:2px">'+p.pin+'</span></p>'+\n    '<div class="fg"><label class="fl">Nuevo PIN (6 digitos)</label><input class="fi" style="font-size:18px;letter-spacing:4px;text-align:center" id="cp1" type="text" maxlength="6" placeholder="000000" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>'+\n    '<p style="font-size:11px;color:var(--txt3);margin-top:4px">Deje en blanco para generar uno aleatorio</p>';\n  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="saveColabPin('+id+')">Guardar</button>';\n  openModal();\n}\nfunction saveColabPin(id){\n  var newPin=document.getElementById('cp1').value.trim();\n  if(!newPin)newPin=String(Math.floor(100000+Math.random()*900000));\n  if(newPin.length<4){alert('Minimo 4 digitos');return;}\n  var idx=personas.findIndex(function(p){return p.id===id;});if(idx<0)return;\n  personas[idx].pin=newPin;lsS('jc_p',personas);savePersonaSB(personas[idx]);\n  closeModal();toast('Nuevo PIN: '+newPin+' - comuniqueselo al colaborador','ok');\n  setTimeout(function(){alert('PIN actualizado para '+personas[idx].nombre+':\n\n'+newPin);},400);\n  renderColabs();\n}\n\n// ADMIN\nfunction exportJSON(){\n  var data={tareas:tareas,personas:personas,exportado:new Date().toISOString()};\n  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});\n  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup_gerencia_'+new Date().toISOString().split('T')[0]+'.json';a.click();\n}\nfunction resetToHistorico(){\n  if(!confirm('Restaurar el historico original?'))return;\n  tareas=JSON.parse(JSON.stringify(HISTORICO_TAREAS));personas=JSON.parse(JSON.stringify(HISTORICO_PERSONAS));\n  lsS('jc_t',tareas);lsS('jc_p',personas);applyFilters();toast('Historico restaurado');\n}\n\n// MODAL\nfunction openModal(){document.getElementById('ov').classList.add('open');}\nfunction closeModal(){document.getElementById('ov').classList.remove('open');calSel=null;}\n\n// INIT\ndocument.addEventListener('DOMContentLoaded', function(){\n  var ap=document.getElementById('admin-pin');\n  if(ap)ap.addEventListener('focus',function(){var e=document.getElementById('admin-err');if(e)e.textContent='';});\n  var dbg=document.getElementById('debug-info');\n  if(dbg)dbg.textContent='v'+DATA_VER+' - '+tareas.length+' tareas - Cargando PINs...';\n  function tryInit(n){\n    initSB();\n    if(sb){\n      loadPinsFromSB().then(function(){if(dbg)dbg.textContent='v'+DATA_VER+' - '+tareas.length+' tareas - Listo';});\n    } else if(n>0){\n      setTimeout(function(){tryInit(n-1);},800);\n    } else {\n      if(dbg)dbg.textContent='v'+DATA_VER+' - '+tareas.length+' tareas - Modo local';\n    }\n  }\n  setTimeout(function(){tryInit(5);},600);\n});\n\n</script>
+  tb.innerHTML=list.map(function(t){ var dr=diasR(t.plazo); var dCls=dr===null?'d-none':dr<0?'d-venc':dr<=3?'d-urg':'d-ok'; var dTxt=dr===null?'-':dr<0?Math.abs(dr)+'d venc.':dr===0?'Hoy':dr+'d'; var ap=t.aplazamientos||0; var bg=avBg(t.responsable||''); return'<tr>'+ '<td><span class="ib '+iCls(t.ips)+'">'+ipsShort(t.ips)+'</span></td>'+ '<td><div style="display:flex;align-items:center;gap:6px"><span class="av" style="background:'+bg+'">'+initials(t.responsable||'')+'</span><div><div style="font-size:12px;font-weight:500">'+(t.responsable||'-')+'</div><div style="font-size:10px;color:var(--txt3)">'+(t.cargo||'')+'</div></div></div></td>'+ '<td><span class="tarea-cell" onclick="verTarea('+t.id+')"><span class="tarea-prev">'+(t.tarea||'-')+'</span></span></td>'+'<td style="font-size:11px;color:var(--txt3);white-space:nowrap">'+fDate(t.fecha)+'</td>'+'<td style="font-size:11px;white-space:nowrap">'+fDate(t.plazo)+'</td>'+'<td><span class="db '+dCls+'">'+dTxt+'</span></td>'+'<td>'+stBadge(t.estado)+'</td>'+'<td style="text-align:center">'+(ap>0?'<span class="aplz-n">'+ap+'x</span>':'-')+'</td>'+'<td><div class="ra">'+'<button class="ib2 done" title="Marcar cumplida" onclick="marcarCumplida('+t.id+')" style="font-size:16px">&#10003;</button>'+'<button class="ib2" title="Editar" onclick="editTarea('+t.id+')" style="font-size:13px">&#9998;</button>'+'<button class="ib2 aplz" title="Aplazar" onclick="aplazarTarea('+t.id+')" style="font-size:13px">&#128197;</button>'+'<button class="ib2" title="WhatsApp" onclick="exportWA('+t.id+')" style="font-size:12px;font-weight:600;color:var(--ok)">WA</button>'+'<button class="ib2 del" title="Eliminar" onclick="delTarea('+t.id+')" style="font-size:16px">&#215;</button>'+'</div></td>'+'</tr>';}).join('');
+}
+function renderFin(list){
+  document.getElementById('cnt-fin').textContent=list.length+' tareas';
+  var tb=document.getElementById('tb-fin');
+  if(!list.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--txt3)">Sin resultados</td></tr>';return;}
+  tb.innerHTML=list.map(function(t){
+    var bg=avBg(t.responsable||'');
+    return'<tr>'+
+      '<td><span class="ib '+iCls(t.ips)+'">'+ipsShort(t.ips)+'</span></td>'+
+      '<td><div style="display:flex;align-items:center;gap:6px"><span class="av" style="background:'+bg+'">'+initials(t.responsable||'')+'</span><span style="font-size:12px">'+(t.responsable||'-')+'</span></div></td>'+
+      '<td style="font-size:12.5px">'+(t.tarea||'-')+'</td>'+
+      '<td style="font-size:11px;color:var(--txt3);white-space:nowrap">'+fDate(t.fecha)+'</td>'+
+      '<td style="font-size:11px;white-space:nowrap">'+fDate(t.plazo)+'</td>'+
+      '<td>'+stBadge(t.estado)+'</td>'+
+      '<td><button class="ib2" onclick="exportWA('+t.id+')" style="font-size:12px;font-weight:600;color:var(--ok)">WA</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+// VIEWS
+function showView(v){
+  document.querySelectorAll('.view').forEach(function(el){el.classList.remove('active');});
+  document.querySelectorAll('.sb-item').forEach(function(el){el.classList.remove('active');});
+  document.getElementById('view-'+v).classList.add('active');
+  var ni=document.getElementById('nav-'+v);if(ni)ni.classList.add('active');
+  var titles={activas:'Directrices en proceso',finalizadas:'Historial de tareas',colaboradores:'Colaboradores',admin:'Administracion'};
+  document.getElementById('tb-title').textContent=titles[v]||v;
+  if(v==='colaboradores')renderColabs();
+}
+
+// COLABORADORES
+function renderColabs(){
+  var c=document.getElementById('colab-list');
+  var grupos={};
+  EMPRESAS.forEach(function(e){grupos[e]=[];});
+  personas.forEach(function(p){(p.empresas||[]).forEach(function(e){if(grupos[e])grupos[e].push(p);});});
+  var html='';
+  EMPRESAS.forEach(function(emp){
+    var lista=grupos[emp]||[];if(!lista.length)return;
+    var sorted=lista.slice().sort(function(a,b){return(a.cargo||'').localeCompare(b.cargo||'')||a.nombre.localeCompare(b.nombre);});
+    html+='<div class="emp-sec"><div class="emp-title">'+emp+' <span style="font-size:11px;font-weight:400;opacity:.7">'+lista.length+' colaboradores</span></div>'+
+    sorted.map(function(p){
+      var bg=avBg(p.nombre);
+      var tags=(p.empresas||[]).map(function(e){return'<span class="ib '+iCls(e)+'" style="font-size:9px">'+ipsShort(e)+'</span>';}).join('');
+      var vis=pinVisible[p.id];
+      var isAdm=curRole==='admin';
+      return'<div class="p-row">'+
+        '<span class="av" style="background:'+bg+';width:32px;height:32px;font-size:11px">'+initials(p.nombre)+'</span>'+
+        '<div class="p-info"><div class="p-name">'+p.nombre+'</div><div class="p-cargo">'+(p.cargo||'-')+'</div><div class="p-tags">'+tags+'</div></div>'+
+        (isAdm?'<div style="display:flex;align-items:center;gap:6px">'+
+          '<span class="p-pin" onclick="togglePinVis('+p.id+')" title="Click para ver/ocultar PIN">'+(vis?p.pin:'------')+'</span>'+
+          '<button class="ib2" onclick="changePinColab('+p.id+')" title="Cambiar PIN" style="font-size:11px;font-weight:600">PIN</button>'+
+        '</div>':'')+
+        '<div style="display:flex;gap:3px;margin-left:'+(isAdm?'0':'auto')+'">'+
+          '<button class="ib2" onclick="editPersona('+p.id+')" style="font-size:13px">&#9998;</button>'+
+          '<button class="ib2 del" onclick="delPersona('+p.id+')" style="font-size:16px">&#215;</button>'+
+        '</div>'+
+      '</div>';
+    }).join('')+'</div>';
+  });
+  c.innerHTML=html||'<p style="color:var(--txt3);padding:20px">Sin colaboradores</p>';
+}
+function togglePinVis(id){pinVisible[id]=!pinVisible[id];renderColabs();}
+
+// CALENDAR
+function initCal(tgtId,val){calTgt=tgtId;var d=val?new Date(val+'T12:00:00'):new Date();calY=d.getFullYear();calM=d.getMonth();calSel=val?new Date(val+'T12:00:00'):null;renderCal();}
+function renderCal(){
+  var c=document.getElementById('cal-'+calTgt);if(!c)return;
+  var first=new Date(calY,calM,1),last=new Date(calY,calM+1,0);
+  var dow=first.getDay()-1;if(dow<0)dow=6;
+  var today=new Date();today.setHours(0,0,0,0);
+  var DOWS=['L','M','X','J','V','S','D'];
+  var cells=DOWS.map(function(d){return'<div class="cal-dow">'+d+'</div>';}).join('');
+  for(var i=0;i<dow;i++)cells+='<div class="cal-day emp"></div>';
+  for(var d=1;d<=last.getDate();d++){
+    var dt=new Date(calY,calM,d);
+    var isT=dt.getTime()===today.getTime();
+    var isS=calSel&&dt.toDateString()===calSel.toDateString();
+    var wk=dt.getDay()===0||dt.getDay()===6;
+    cells+='<div class="cal-day'+(isT?' tod':'')+(isS?' sel':'')+(wk&&!isS?' wknd':'')+'" onclick="calPick('+d+')">'+d+'</div>';
+  }
+  c.innerHTML='<div class="cal"><div class="cal-hd"><button class="cal-nav" onclick="calMov(-1)">&#8249;</button><span class="cal-ml">'+MESES[calM]+' '+calY+'</span><button class="cal-nav" onclick="calMov(1)">&#8250;</button></div><div class="cal-grid">'+cells+'</div><div class="cal-sel-txt">'+(calSel?fDate(calSel.toISOString().split('T')[0]):'')+'</div></div>';
+}
+function calMov(d){calM+=d;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}renderCal();}
+function calPick(d){calSel=new Date(calY,calM,d);var iso=calSel.toISOString().split('T')[0];var inp=document.getElementById(calTgt);if(inp){inp.value=iso;inp.dispatchEvent(new Event('change'));}renderCal();}
+
+// AUTOCOMPLETE
+function setupAC(inpId,lstId){
+  var inp=document.getElementById(inpId),lst=document.getElementById(lstId);if(!inp||!lst)return;
+  inp.addEventListener('input',function(){
+    var q=inp.value.toLowerCase().trim();if(q.length<1){lst.style.display='none';return;}
+    var hits=personas.filter(function(p){return p.nombre.toLowerCase().indexOf(q)>=0;}).slice(0,8);
+    if(!hits.length){lst.style.display='none';return;}
+    lst.style.display='block';
+    var acItems=[];hits.forEach(function(p){acItems.push('<div class="acitem" data-pid="'+p.id+'"><div class="acname">'+p.nombre+'</div><div class="acsub">'+(p.cargo||'')+'</div></div>');});lst.innerHTML=acItems.join('');Array.from(lst.querySelectorAll('.acitem')).forEach(function(el){var pid=parseInt(el.getAttribute('data-pid'));el.onclick=function(){acSel(pid,inpId,lstId);};});
+  });
+  document.addEventListener('click',function(e){if(!inp.contains(e.target)&&!lst.contains(e.target))lst.style.display='none';});
+}
+function acSel(pid,inpId,lstId){
+  var p=personas.find(function(x){return x.id===pid;});if(!p)return;
+  var inp=document.getElementById(inpId);if(inp)inp.value=p.nombre;
+  var lst=document.getElementById(lstId);if(lst)lst.style.display='none';
+  var cEl=document.getElementById('f-cargo');if(cEl&&p.cargo)cEl.value=p.cargo;
+  if(p.empresas&&p.empresas.length===1){var el=document.getElementById('f-ips');if(el)el.value=p.empresas[0];}
+}
+
+// NUEVA/EDITAR TAREA
+function openNuevaTarea(prefill){
+  var t=prefill||{},isEdit=!!t.id;
+  document.getElementById('mtitle').textContent=isEdit?'Editar tarea':'Nueva directriz';
+  document.getElementById('mbody').innerHTML=
+    '<div class="fr c2" style="margin-bottom:13px">'+
+      '<div class="fg"><label class="fl">IPS</label><select class="fi" id="f-ips">'+EMPRESAS.map(function(e){return'<option value="'+e+'"'+(t.ips===e?' selected':'')+'>'+e+'</option>';}).join('')+'</select></div>'+
+      '<div class="fg" style="position:relative"><label class="fl">Responsable</label><input class="fi" id="f-resp" value="'+(t.responsable||'')+'" placeholder="Escriba nombre..." autocomplete="off"><div class="aclist" id="f-resp-list"></div></div>'+
+    '</div>'+
+    '<div class="fg" style="margin-bottom:13px"><label class="fl">Cargo (se autocompleta)</label><input class="fi" id="f-cargo" value="'+(t.cargo||'')+'" placeholder="Cargo del responsable"></div>'+
+    '<div class="fg" style="margin-bottom:13px"><label class="fl">Directriz / Tarea</label><textarea class="fi" id="f-tarea" rows="4">'+(t.tarea||'')+'</textarea></div>'+
+    '<div class="fr c2" style="margin-bottom:13px">'+
+      '<div class="fg"><label class="fl">Fecha de asignacion</label><input class="fi" id="f-fecha" type="date" value="'+(t.fecha||new Date().toISOString().split('T')[0])+'"><div id="cal-f-fecha"></div></div>'+
+      '<div class="fg"><label class="fl">Plazo de entrega</label><input class="fi" id="f-plazo" type="date" value="'+(t.plazo||'')+'"><div id="cal-f-plazo"></div></div>'+
+    '</div>'+
+    (isEdit?'<div class="fg" style="margin-bottom:13px"><label class="fl">Estado</label><select class="fi" id="f-est">'+ESTADOS_ACT.map(function(e){return'<option value="'+e+'"'+((t.estado||'PENDIENTE')===e?' selected':'')+'>'+e+'</option>';}).join('')+'<option value="FINALIZADA"'+(t.estado==='FINALIZADA'?' selected':'')+'>FINALIZADA</option></select></div>':'')+
+    '<div class="fg"><label class="fl">Anotaciones</label><input class="fi" id="f-nota" value="'+(t.nota||'')+'" placeholder="Observaciones adicionales..."></div>';
+  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="saveTarea('+(t.id||0)+')">'+(isEdit?'Actualizar':'Guardar')+'</button>';
+  openModal();setupAC('f-resp','f-resp-list');
+  setTimeout(function(){
+    var ff=document.getElementById('f-fecha');if(ff)ff.addEventListener('click',function(){initCal('f-fecha',this.value);});
+    var fp=document.getElementById('f-plazo');if(fp)fp.addEventListener('click',function(){initCal('f-plazo',this.value);});
+  },50);
+}
+function editTarea(id){var t=tareas.find(function(x){return x.id===id;});if(t)openNuevaTarea(t);}
+function saveTarea(id){
+  var ips=document.getElementById('f-ips').value;
+  var resp=document.getElementById('f-resp').value.trim();
+  var cargo=document.getElementById('f-cargo').value.trim();
+  var tarea=document.getElementById('f-tarea').value.trim();
+  var fecha=document.getElementById('f-fecha').value;
+  var plazo=document.getElementById('f-plazo').value;
+  var estado=document.getElementById('f-est')?document.getElementById('f-est').value:'PENDIENTE';
+  var nota=document.getElementById('f-nota').value.trim();
+  if(!tarea){alert('La tarea es obligatoria');return;}
+  var obj;
+  if(id){
+    var idx=tareas.findIndex(function(x){return x.id===id;});
+    if(idx>=0){tareas[idx]=Object.assign({},tareas[idx],{ips:ips,responsable:resp,cargo:cargo,tarea:tarea,fecha:fecha,plazo:plazo,estado:estado,nota:nota});obj=tareas[idx];}
+  } else {
+    obj={id:Date.now(),ips:ips,responsable:resp,cargo:cargo,tarea:tarea,fecha:fecha,plazo:plazo,estado:'PENDIENTE',nota:nota,cumplimiento:'',aplazamientos:0,fecha_nueva:'',hoja:'NUEVA',creado:new Date().toISOString()};
+    tareas.push(obj);
+  }
+  lsS('jc_t',tareas);if(obj)saveTareaSB(obj);closeModal();applyFilters();toast('Tarea guardada','ok');
+}
+function marcarCumplida(id){
+  var t=tareas.find(function(x){return x.id===id;});if(!t)return;
+  if(!confirm('Marcar como finalizada?'))return;
+  t.estado='FINALIZADA';t.cumplimiento='OK';lsS('jc_t',tareas);saveTareaSB(t);applyFilters();toast('Tarea finalizada','ok');
+}
+function delTarea(id){
+  if(!confirm('Eliminar esta tarea?'))return;
+  tareas=tareas.filter(function(x){return x.id!==id;});lsS('jc_t',tareas);delTareaSB(id);applyFilters();toast('Tarea eliminada');
+}
+
+// APLAZAR
+function aplazarTarea(id){
+  var t=tareas.find(function(x){return x.id===id;});if(!t)return;
+  var ap=(t.aplazamientos||0)+1;
+  document.getElementById('mtitle').textContent='Aplazar tarea - #'+ap;
+  document.getElementById('mbody').innerHTML=
+    '<div class="dtarea">'+(t.tarea||'')+'</div>'+
+    '<p style="font-size:12px;color:var(--txt3);margin-bottom:14px">Plazo actual: <strong>'+fDate(t.plazo)+'</strong> - Aplazamiento #'+ap+'</p>'+
+    '<div class="fg"><label class="fl">Nueva fecha de entrega</label><input class="fi" id="ap-f" type="date" value="'+(t.plazo||'')+'"><div id="cal-ap-f"></div></div>'+
+    '<div class="fg" style="margin-top:10px"><label class="fl">Motivo del aplazamiento</label><textarea class="fi" id="ap-m" rows="3" placeholder="Razon del aplazamiento..."></textarea></div>';
+  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn" style="background:var(--warn-lt);color:var(--warn);border-color:var(--warn)" onclick="confAplazar('+id+')">Confirmar aplazamiento</button>';
+  openModal();
+  setTimeout(function(){var af=document.getElementById('ap-f');if(af)af.addEventListener('click',function(){initCal('ap-f',this.value);});},50);
+}
+function confAplazar(id){
+  var f=document.getElementById('ap-f').value,m=document.getElementById('ap-m').value.trim();
+  if(!f){alert('Seleccione nueva fecha');return;}
+  var t=tareas.find(function(x){return x.id===id;});if(!t)return;
+  t.aplazamientos=(t.aplazamientos||0)+1;
+  var prev=t.nota?t.nota+' | ':'';
+  t.nota=prev+'Aplaz.'+t.aplazamientos+' ('+fDate(t.plazo)+'->'+fDate(f)+')'+(m?' - '+m:'');
+  t.plazo=f;t.estado='APLAZADO';lsS('jc_t',tareas);saveTareaSB(t);closeModal();applyFilters();toast('Tarea aplazada');
+}
+
+// VER TAREA
+function verTarea(id){
+  var t=tareas.find(function(x){return x.id===id;});if(!t)return;
+  var dr=diasR(t.plazo),dh=diasH(t.fecha,t.plazo);
+  var drTxt=dr===null?'-':dr<0?'<span style="color:var(--err)">'+Math.abs(dr)+' dias VENCIDA</span>':dr===0?'<span style="color:var(--warn)">Vence HOY</span>':'<span style="color:var(--ok)">'+dr+' dias restantes</span>';
+  document.getElementById('mtitle').textContent='Detalle de directriz';
+  document.getElementById('mbody').innerHTML=
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"><span class="ib '+iCls(t.ips)+'">'+(t.ips||'-')+'</span>'+stBadge(t.estado)+(t.aplazamientos>0?'<span class="aplz-n">'+t.aplazamientos+' aplaz.</span>':'')+'</div>'+
+    '<div class="dtarea">'+(t.tarea||'-')+'</div>'+
+    '<div class="dgrid">'+
+      '<div><div class="dl-lbl">Responsable</div><div class="dl-val" style="display:flex;align-items:center;gap:7px"><span class="av" style="background:'+avBg(t.responsable||'')+'">'+initials(t.responsable||'')+'</span>'+(t.responsable||'-')+'</div></div>'+
+      '<div><div class="dl-lbl">Cargo</div><div class="dl-val">'+(t.cargo||'-')+'</div></div>'+
+      '<div><div class="dl-lbl">Asignada</div><div class="dl-val">'+fDate(t.fecha)+'</div></div>'+
+      '<div><div class="dl-lbl">Plazo</div><div class="dl-val">'+fDate(t.plazo)+'</div></div>'+
+      '<div><div class="dl-lbl">Dias habiles</div><div class="dl-val">'+(dh!==null?dh+' dias':'-')+'</div></div>'+
+      '<div><div class="dl-lbl">Tiempo</div><div class="dl-val">'+drTxt+'</div></div>'+
+    '</div>'+
+    (t.nota?'<div style="padding:10px;background:var(--surf2);border-radius:var(--r);font-size:12px;color:var(--txt2);border-left:3px solid var(--bdr2)"><b>Anotaciones:</b> '+t.nota+'</div>':'');
+  document.getElementById('mfoot').innerHTML=
+    '<button class="btn" onclick="closeModal()">Cerrar</button>'+
+    '<button class="btn" onclick="closeModal();aplazarTarea('+id+')">Aplazar</button>'+
+    '<button class="btn" onclick="closeModal();exportWA('+id+')">WhatsApp</button>'+
+    (!esFin(t)?'<button class="btn suc" onclick="closeModal();marcarCumplida('+id+')">Finalizar</button>':'')+
+    '<button class="btn pri" onclick="closeModal();editTarea('+id+')">Editar</button>';
+  openModal();
+}
+
+// WHATSAPP
+function exportWA(id){
+  var t=tareas.find(function(x){return x.id===id;});if(!t)return;
+  var dh=diasH(t.fecha,t.plazo);
+  var p=pByName(t.responsable)||{};
+  var cargo=t.cargo||p.cargo||'';
+    var lines=['---','DIRECTRIZ DE GERENCIA','---','IPS: '+(t.ips||'-'),'Para: '+(t.responsable||'-')+(cargo?' - '+cargo:''),'---','TAREA ASIGNADA:',t.tarea||'-','---','Fecha de asignacion: '+fDate(t.fecha),'Plazo de entrega: '+(fDate(t.plazo)||'Por definir'),'Dias habiles: '+(dh!==null?dh+' dias':'-'),'---','Dra. Jenifer Cleves Grijalba','Gerencia General'];
+  var txt=lines.join('\n');
+  window._waTxt=txt;
+  document.getElementById('mtitle').textContent='Exportar para WhatsApp';
+  document.getElementById('mbody').innerHTML='<p style="font-size:12px;color:var(--txt3);margin-bottom:8px">Copie y pegue en WhatsApp:</p><div class="wa-box">'+txt.replace(/</g,'&lt;')+'</div>';
+  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cerrar</button><button class="btn pri" onclick="copyWA()">Copiar</button><span class="copy-ok" id="copy-ok">Copiado</span>';
+  openModal();
+}
+function copyWA(){navigator.clipboard.writeText(window._waTxt||'').then(function(){var ok=document.getElementById('copy-ok');if(ok){ok.style.display='inline';setTimeout(function(){ok.style.display='none';},2500);}});}
+
+// PERSONAS
+function openNuevaPersona(pref){
+  var p=pref||{},emps=p.empresas||[];
+  document.getElementById('mtitle').textContent=p.id?'Editar colaborador':'Nuevo colaborador';
+  document.getElementById('mbody').innerHTML=
+    '<div class="fr c2" style="margin-bottom:13px"><div class="fg"><label class="fl">Nombre completo</label><input class="fi" id="fp-n" value="'+(p.nombre||'')+'" placeholder="NOMBRE COMPLETO"></div><div class="fg"><label class="fl">Cargo / Area</label><input class="fi" id="fp-c" value="'+(p.cargo||'')+'" placeholder="Cargo"></div></div>'+
+    '<div class="fg"><label class="fl">Empresas asignadas</label><div class="echwrap">'+EMPRESAS.map(function(e){return'<label class="echk"><input type="checkbox" value="'+e+'" '+(emps.indexOf(e)>=0?'checked':'')+'>'+e+'</label>';}).join('')+'</div></div>';
+  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="savePersona('+(p.id||0)+')">'+(p.id?'Actualizar':'Guardar')+'</button>';
+  openModal();
+}
+function savePersona(id){
+  var nombre=document.getElementById('fp-n').value.trim().toUpperCase();
+  var cargo=document.getElementById('fp-c').value.trim();
+  var empresas=Array.from(document.querySelectorAll('#mbody input[type=checkbox]:checked')).map(function(b){return b.value;});
+  if(!nombre){alert('Nombre obligatorio');return;}if(!empresas.length){alert('Seleccione al menos una empresa');return;}
+  var obj;
+  if(id){var idx=personas.findIndex(function(p){return p.id===id;});if(idx>=0){personas[idx]=Object.assign({},personas[idx],{nombre:nombre,cargo:cargo,empresas:empresas});obj=personas[idx];}}
+  else{
+    var pin=String(Math.floor(100000+Math.random()*900000));
+    obj={id:Date.now(),nombre:nombre,cargo:cargo,empresas:empresas,pin:pin,activo:true};
+    personas.push(obj);
+    setTimeout(function(){alert('PIN generado para '+nombre+':\n\n'+pin+'\n\nComuniqueselo al colaborador.');},400);
+  }
+  lsS('jc_p',personas);if(obj)savePersonaSB(obj);closeModal();renderColabs();
+}
+function editPersona(id){var p=personas.find(function(x){return x.id===id;});if(p)openNuevaPersona(p);}
+function delPersona(id){
+  if(!confirm('Eliminar este colaborador?'))return;
+  personas=personas.filter(function(p){return p.id!==id;});lsS('jc_p',personas);delPersonaSB(id);renderColabs();toast('Colaborador eliminado');
+}
+
+// PIN MANAGEMENT
+function changePinDialog(who){
+  var label=who==='admin'?'Admin':'Gerencia (Dra. Jenifer Cleves)';
+  document.getElementById('mtitle').textContent='Cambiar PIN - '+label;
+  document.getElementById('mbody').innerHTML=
+    '<div class="fg"><label class="fl">Nuevo PIN (6 digitos)</label><input class="fi li-pin" id="np1" type="password" maxlength="6" placeholder="------" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>'+
+    '<div class="fg"><label class="fl">Confirmar PIN</label><input class="fi li-pin" id="np2" type="password" maxlength="6" placeholder="------" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>';
+  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="savePin(''+who+'')">Guardar PIN</button>';
+  openModal();
+}
+function savePin(who){
+  var p1=document.getElementById('np1').value,p2=document.getElementById('np2').value;
+  if(p1.length<4){alert('Minimo 4 digitos');return;}if(p1!==p2){alert('Los PINs no coinciden');return;}
+  pins[who]=p1;lsS('jc_pins',pins);savePinsSB();closeModal();toast('PIN actualizado y sincronizado','ok');
+}
+function toggleShowPin(who){
+  var el=document.getElementById('pin-'+who+'-show');if(!el)return;
+  el.textContent=el.textContent.indexOf('-')>=0?pins[who]:'------';
+}
+function changePinColab(id){
+  var p=personas.find(function(x){return x.id===id;});if(!p)return;
+  document.getElementById('mtitle').textContent='Cambiar PIN - '+p.nombre;
+  document.getElementById('mbody').innerHTML=
+    '<p style="font-size:12px;color:var(--txt3);margin-bottom:14px">PIN actual: <span style="font-family:monospace;background:var(--surf3);padding:2px 8px;border-radius:4px;letter-spacing:2px">'+p.pin+'</span></p>'+
+    '<div class="fg"><label class="fl">Nuevo PIN (6 digitos)</label><input class="fi" style="font-size:18px;letter-spacing:4px;text-align:center" id="cp1" type="text" maxlength="6" placeholder="000000" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>'+
+    '<p style="font-size:11px;color:var(--txt3);margin-top:4px">Deje en blanco para generar uno aleatorio</p>';
+  document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="saveColabPin('+id+')">Guardar</button>';
+  openModal();
+}
+function saveColabPin(id){
+  var newPin=document.getElementById('cp1').value.trim();
+  if(!newPin)newPin=String(Math.floor(100000+Math.random()*900000));
+  if(newPin.length<4){alert('Minimo 4 digitos');return;}
+  var idx=personas.findIndex(function(p){return p.id===id;});if(idx<0)return;
+  personas[idx].pin=newPin;lsS('jc_p',personas);savePersonaSB(personas[idx]);
+  closeModal();toast('Nuevo PIN: '+newPin+' - comuniqueselo al colaborador','ok');
+  setTimeout(function(){alert('PIN actualizado para '+personas[idx].nombre+':\n\n'+newPin);},400);
+  renderColabs();
+}
+
+// ADMIN
+function exportJSON(){
+  var data={tareas:tareas,personas:personas,exportado:new Date().toISOString()};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup_gerencia_'+new Date().toISOString().split('T')[0]+'.json';a.click();
+}
+function resetToHistorico(){
+  if(!confirm('Restaurar el historico original?'))return;
+  tareas=JSON.parse(JSON.stringify(HISTORICO_TAREAS));personas=JSON.parse(JSON.stringify(HISTORICO_PERSONAS));
+  lsS('jc_t',tareas);lsS('jc_p',personas);applyFilters();toast('Historico restaurado');
+}
+
+// MODAL
+function openModal(){document.getElementById('ov').classList.add('open');}
+function closeModal(){document.getElementById('ov').classList.remove('open');calSel=null;}
+
+// INIT
+document.addEventListener('DOMContentLoaded', function(){
+  var ap=document.getElementById('admin-pin');
+  if(ap)ap.addEventListener('focus',function(){var e=document.getElementById('admin-err');if(e)e.textContent='';});
+  var dbg=document.getElementById('debug-info');
+  if(dbg)dbg.textContent='v'+DATA_VER+' - '+tareas.length+' tareas - Cargando PINs...';
+  function tryInit(n){
+    initSB();
+    if(sb){
+      loadPinsFromSB().then(function(){if(dbg)dbg.textContent='v'+DATA_VER+' - '+tareas.length+' tareas - Listo';});
+    } else if(n>0){
+      setTimeout(function(){tryInit(n-1);},800);
+    } else {
+      if(dbg)dbg.textContent='v'+DATA_VER+' - '+tareas.length+' tareas - Modo local';
+    }
+  }
+  setTimeout(function(){tryInit(5);},600);
+});
+
+</script>
 </body>
 </html>
