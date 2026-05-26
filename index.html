@@ -505,16 +505,42 @@ let sb = null;
 function initSB(){
   try{
     if(SB_URL.includes('YOUR_PROJECT')||SB_KEY.includes('YOUR_ANON')){
-      setSyncStatus('warn','Supabase no configurado — modo local');
+      setSyncStatus('warn','Modo local');
       return;
     }
     if(window.supabase && typeof window.supabase.createClient==='function'){
       sb = window.supabase.createClient(SB_URL, SB_KEY);
       setSyncStatus('ok','Conectado');
     } else {
-      setTimeout(initSB, 1000);
+      setTimeout(initSB, 800);
     }
   }catch(e){ setSyncStatus('err','Sin conexión'); }
+}
+
+// Load PINs from Supabase before showing login
+async function loadPinsFromSB(){
+  if(!sb) return;
+  try{
+    const {data,error} = await sb.from('jc_config').select('*');
+    if(error||!data||!data.length) return;
+    data.forEach(row=>{
+      if(row.key==='pin_admin') pins.admin=row.value;
+      if(row.key==='pin_gerencia') pins.gerencia=row.value;
+    });
+    lsS('jc_pins',pins);
+    const el=document.getElementById('debug-info');
+    if(el) el.textContent='v'+DATA_VER+' · '+tareas.length+' tareas · Listo';
+  }catch(e){}
+}
+
+async function savePinsSB(){
+  if(!sb) return;
+  try{
+    await sb.from('jc_config').upsert([
+      {key:'pin_admin', value:pins.admin},
+      {key:'pin_gerencia', value:pins.gerencia}
+    ],{onConflict:'key'});
+  }catch(e){}
 }
 
 function setSyncStatus(s,t){
@@ -728,17 +754,19 @@ async function delPersonaSB(id){
   try{await sb.from('jc_personas').delete().eq('id',id);}catch(e){}
 }
 async function forceSyncAll(){
-  if(!sb){toast('Sin conexión Supabase','err');return;}
-  setSyncStatus('syncing','Sincronizando todo...');
+  if(!sb){toast('Sin conexion Supabase','err');return;}
+  setSyncStatus('syncing','Sincronizando...');
   try{
     const tp=tareas.map(t=>({...t}));
     const pp=personas.map(p=>({...p,empresas:JSON.stringify(p.empresas)}));
     await sb.from('jc_tareas').upsert(tp,{onConflict:'id'});
     await sb.from('jc_personas').upsert(pp,{onConflict:'id'});
-    setSyncStatus('ok','Todo sincronizado');
-    toast('Sincronización completa ✓','ok');
-    document.getElementById('admin-sync-info').textContent='Sync completo: '+new Date().toLocaleTimeString('es-CO');
-  }catch(e){setSyncStatus('err','Error');toast('Error de sincronización','err');}
+    await savePinsSB();
+    setSyncStatus('ok','Sincronizado');
+    toast('Sincronizacion completa ✓','ok');
+    var el=document.getElementById('admin-sync-info');
+    if(el) el.textContent='Sync: '+new Date().toLocaleTimeString('es-CO');
+  }catch(e){setSyncStatus('err','Error');toast('Error de sincronizacion','err');}
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1328,9 +1356,13 @@ function changePinDialog(who){
 }
 function savePin(who){
   const p1=document.getElementById('np1').value, p2=document.getElementById('np2').value;
-  if(p1.length<4){alert('Mínimo 4 dígitos');return;}
+  if(p1.length<4){alert('Minimo 4 digitos');return;}
   if(p1!==p2){alert('Los PINs no coinciden');return;}
-  pins[who]=p1; lsS('jc_pins',pins); closeModal(); toast('PIN actualizado ✓','ok');
+  pins[who]=p1;
+  lsS('jc_pins',pins);
+  savePinsSB();
+  closeModal();
+  toast('PIN actualizado y sincronizado ✓','ok');
 }
 function toggleShowPin(who){
   const el=document.getElementById('pin-'+who+'-show');
@@ -1390,8 +1422,23 @@ function closeModal(){document.getElementById('ov').classList.remove('open');cal
 // INIT
 // ═══════════════════════════════════════════════════════
 // Mostrar login al cargar
-document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('admin-pin').addEventListener('focus',()=>document.getElementById('admin-err').textContent='');
+document.addEventListener('DOMContentLoaded', function(){
+  // Focus handler
+  var apEl=document.getElementById('admin-pin');
+  if(apEl) apEl.addEventListener('focus',function(){
+    var e=document.getElementById('admin-err'); if(e) e.textContent='';
+  });
+  // Init Supabase then load PINs, with retry
+  function tryInit(attempts){
+    initSB();
+    if(sb){
+      loadPinsFromSB();
+    } else if(attempts>0){
+      setTimeout(function(){ tryInit(attempts-1); }, 800);
+    }
+  }
+  // Give Supabase CDN time to load (async defer)
+  setTimeout(function(){ tryInit(5); }, 600);
 });
 </script>
 </body>
