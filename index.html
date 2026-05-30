@@ -592,13 +592,21 @@ function enterApp(role,name){
   document.getElementById('sb-ur').textContent=role==='admin'?'Administrador':'Gerencia';
   renderIPSpills();applyFilters();loadFromSB();
 }
-function enterColabView(p){
+async function enterColabView(p){
   curRole='colaborador';curUser=p.nombre;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='none';
   document.getElementById('colab-view').classList.add('open');
   document.getElementById('cv-title').textContent='Hola, '+p.nombre.split(' ')[0];
   document.getElementById('cv-sub').textContent=(p.cargo||'')+' - '+(p.empresas||[]).join(', ');
+  var c=document.getElementById('cv-content');
+  c.innerHTML='<div style="text-align:center;padding:40px;color:var(--txt3)"><div style="font-size:28px;margin-bottom:10px">⏳</div><div style="font-size:14px;font-weight:500">Cargando tareas...</div></div>';
+  if(sb){
+    try{
+      var rt=await sb.from('jc_tareas').select('*').order('id');
+      if(!rt.error&&rt.data&&rt.data.length>0){tareas=rt.data;lsS('jc_t',tareas);}
+    }catch(e){}
+  }
   renderColabView(p);
 }
 function logout(){
