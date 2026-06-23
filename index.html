@@ -544,6 +544,14 @@ function setLTab(t){
   document.getElementById('ls-admin').classList.toggle('active',t==='admin');
   document.getElementById('ls-colab').classList.toggle('active',t==='colab');
   if(t==='admin')setRole('admin');
+  if(t==='colab'&&sb){
+    sb.from('jc_personas').select('*').order('id').then(function(rp){
+      if(!rp.error&&rp.data&&rp.data.length>0){
+        personas=rp.data.map(function(p){return Object.assign({},p,{empresas:typeof p.empresas==='string'?JSON.parse(p.empresas):p.empresas||[]});});
+        lsS('jc_p',personas);
+      }
+    }).catch(function(){});
+  }
 }
 function tryAdminLogin(){
   var pinEl=document.getElementById('admin-pin');
