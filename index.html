@@ -630,7 +630,7 @@ function logout(){
 // COLAB VIEW
 function renderColabView(p){
   var c=document.getElementById('cv-content');
-  var mis=tareas.filter(function(t){return !esFin(t)&&(t.responsable||'').toUpperCase()===p.nombre.toUpperCase();});
+  var mis=tareas.filter(function(t){if(esFin(t))return false;if((t.responsable||'').toUpperCase()===p.nombre.toUpperCase())return true;var cors=t.coresponsables||[];return cors.some(function(c){return(c.nombre||'').toUpperCase()===p.nombre.toUpperCase();});});
   if(!mis.length){c.innerHTML='<div class="cv-empty"><div style="font-size:40px;margin-bottom:12px;color:var(--ok)">&#10003;</div><div style="font-size:16px;font-weight:600">Sin tareas pendientes</div><div style="font-size:13px;margin-top:6px">No tiene directrices activas asignadas.</div></div>';return;}
   mis.sort(function(a,b){var da=diasR(a.plazo)||9999,db=diasR(b.plazo)||9999;return da-db;});
   c.innerHTML=mis.map(function(t){
@@ -693,7 +693,7 @@ function renderAct(list){
   document.getElementById('cnt-act').textContent=list.length+' tareas';
   var tb=document.getElementById('tb-act');
   if(!list.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--txt3)">Sin tareas activas</td></tr>';return;}
-  tb.innerHTML=list.map(function(t){ var dr=diasR(t.plazo); var dCls=dr===null?'d-none':dr<0?'d-venc':dr<=3?'d-urg':'d-ok'; var dTxt=dr===null?'-':dr<0?Math.abs(dr)+'d venc.':dr===0?'Hoy':dr+'d'; var ap=t.aplazamientos||0; var bg=avBg(t.responsable||''); return'<tr>'+ '<td><span class="ib '+iCls(t.ips)+'">'+ipsShort(t.ips)+'</span></td>'+ '<td><div style="display:flex;align-items:center;gap:6px"><span class="av" style="background:'+bg+'">'+initials(t.responsable||'')+'</span><div><div style="font-size:12px;font-weight:500">'+(t.responsable||'-')+'</div><div style="font-size:10px;color:var(--txt3)">'+(t.cargo||'')+'</div></div></div></td>'+ '<td><span class="tarea-cell" onclick="verTarea('+t.id+')"><span class="tarea-prev">'+(t.tarea||'-')+'</span></span></td>'+'<td style="font-size:11px;color:var(--txt3);white-space:nowrap">'+fDate(t.fecha)+'</td>'+'<td style="font-size:11px;white-space:nowrap">'+fDate(t.plazo)+'</td>'+'<td><span class="db '+dCls+'">'+dTxt+'</span></td>'+'<td>'+stBadge(t.estado)+'</td>'+'<td style="text-align:center">'+(ap>0?'<span class="aplz-n">'+ap+'x</span>':'-')+'</td>'+'<td><div class="ra">'+'<button class="ib2 done" title="Marcar cumplida" onclick="marcarCumplida('+t.id+')" style="font-size:16px">&#10003;</button>'+'<button class="ib2" title="Editar" onclick="editTarea('+t.id+')" style="font-size:13px">&#9998;</button>'+'<button class="ib2 aplz" title="Aplazar" onclick="aplazarTarea('+t.id+')" style="font-size:13px">&#128197;</button>'+'<button class="ib2" title="WhatsApp" onclick="exportWA('+t.id+')" style="font-size:12px;font-weight:600;color:var(--ok)">WA</button>'+'<button class="ib2 del" title="Eliminar" onclick="delTarea('+t.id+')" style="font-size:16px">&#215;</button>'+'</div></td>'+'</tr>';}).join('');
+  tb.innerHTML=list.map(function(t){ var dr=diasR(t.plazo); var dCls=dr===null?'d-none':dr<0?'d-venc':dr<=3?'d-urg':'d-ok'; var dTxt=dr===null?'-':dr<0?Math.abs(dr)+'d venc.':dr===0?'Hoy':dr+'d'; var ap=t.aplazamientos||0; var bg=avBg(t.responsable||''); return'<tr>'+ '<td><span class="ib '+iCls(t.ips)+'">'+ipsShort(t.ips)+'</span></td>'+ '<td><div style="display:flex;align-items:center;gap:6px"><span class="av" style="background:'+bg+'">'+initials(t.responsable||'')+'</span><div><div style="font-size:12px;font-weight:500">'+(t.responsable||'-')+'</div><div style="font-size:10px;color:var(--txt3)">'+(t.cargo||'')+'</div>'+(((curRole==='admin'||curRole==='gerencia')&&(t.coresponsables||[]).length)?'<div style="font-size:9px;color:var(--acc);margin-top:2px">+'+((t.coresponsables||[]).length)+' co-resp.</div>':'')+'</div></div></td>'+ '<td><span class="tarea-cell" onclick="verTarea('+t.id+')"><span class="tarea-prev">'+(t.tarea||'-')+'</span></span></td>'+'<td style="font-size:11px;color:var(--txt3);white-space:nowrap">'+fDate(t.fecha)+'</td>'+'<td style="font-size:11px;white-space:nowrap">'+fDate(t.plazo)+'</td>'+'<td><span class="db '+dCls+'">'+dTxt+'</span></td>'+'<td>'+stBadge(t.estado)+'</td>'+'<td style="text-align:center">'+(ap>0?'<span class="aplz-n">'+ap+'x</span>':'-')+'</td>'+'<td><div class="ra">'+'<button class="ib2 done" title="Marcar cumplida" onclick="marcarCumplida('+t.id+')" style="font-size:16px">&#10003;</button>'+'<button class="ib2" title="Editar" onclick="editTarea('+t.id+')" style="font-size:13px">&#9998;</button>'+'<button class="ib2 aplz" title="Aplazar" onclick="aplazarTarea('+t.id+')" style="font-size:13px">&#128197;</button>'+'<button class="ib2" title="WhatsApp" onclick="exportWA('+t.id+')" style="font-size:12px;font-weight:600;color:var(--ok)">WA</button>'+'<button class="ib2 del" title="Eliminar" onclick="delTarea('+t.id+')" style="font-size:16px">&#215;</button>'+'</div></td>'+'</tr>';}).join('');
 }
 function renderFin(list){
   document.getElementById('cnt-fin').textContent=list.length+' tareas';
@@ -815,9 +815,20 @@ function openNuevaTarea(prefill){
       '<div class="fg"><label class="fl">Plazo de entrega</label><input class="fi" id="f-plazo" type="date" value="'+(t.plazo||'')+'"><div id="cal-f-plazo"></div></div>'+
     '</div>'+
     (isEdit?'<div class="fg" style="margin-bottom:13px"><label class="fl">Estado</label><select class="fi" id="f-est">'+ESTADOS_ACT.map(function(e){return'<option value="'+e+'"'+((t.estado||'PENDIENTE')===e?' selected':'')+'>'+e+'</option>';}).join('')+'<option value="FINALIZADA"'+(t.estado==='FINALIZADA'?' selected':'')+'>FINALIZADA</option></select></div>':'')+
+    '<div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:12px;margin-bottom:13px">'+
+    '<div style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--txt3);font-weight:500;margin-bottom:10px">Co-responsables (opcional, max. 2)</div>'+
+    '<div class="fr c2" style="margin-bottom:8px">'+
+      '<div class="fg" style="position:relative;margin-bottom:0"><label class="fl" style="font-size:9px">Co-responsable 1</label><input class="fi" id="f-cor1" value="'+(t.coresponsables&&t.coresponsables[0]?t.coresponsables[0].nombre:'')+'" placeholder="Nombre..." autocomplete="off"><div class="aclist" id="f-cor1-list"></div></div>'+
+      '<div class="fg" style="margin-bottom:0"><label class="fl" style="font-size:9px">Cargo</label><input class="fi" id="f-cor1-cargo" value="'+(t.coresponsables&&t.coresponsables[0]?t.coresponsables[0].cargo:'')+'" placeholder="Auto"></div>'+
+    '</div>'+
+    '<div class="fr c2">'+
+      '<div class="fg" style="position:relative;margin-bottom:0"><label class="fl" style="font-size:9px">Co-responsable 2</label><input class="fi" id="f-cor2" value="'+(t.coresponsables&&t.coresponsables[1]?t.coresponsables[1].nombre:'')+'" placeholder="Nombre..." autocomplete="off"><div class="aclist" id="f-cor2-list"></div></div>'+
+      '<div class="fg" style="margin-bottom:0"><label class="fl" style="font-size:9px">Cargo</label><input class="fi" id="f-cor2-cargo" value="'+(t.coresponsables&&t.coresponsables[1]?t.coresponsables[1].cargo:'')+'" placeholder="Auto"></div>'+
+    '</div>'+
+    '</div>'+
     '<div class="fg"><label class="fl">Anotaciones</label><input class="fi" id="f-nota" value="'+(t.nota||'')+'" placeholder="Observaciones adicionales..."></div>';
   document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="saveTarea('+(t.id||0)+')">'+(isEdit?'Actualizar':'Guardar')+'</button>';
-  openModal();setupAC('f-resp','f-resp-list');
+  openModal();setupAC('f-resp','f-resp-list');setupACCor('f-cor1','f-cor1-list','f-cor1-cargo');setupACCor('f-cor2','f-cor2-list','f-cor2-cargo');
   setTimeout(function(){
     var ff=document.getElementById('f-fecha');if(ff)ff.addEventListener('click',function(){initCal('f-fecha',this.value);});
     var fp=document.getElementById('f-plazo');if(fp)fp.addEventListener('click',function(){initCal('f-plazo',this.value);});
@@ -833,13 +844,20 @@ function saveTarea(id){
   var plazo=document.getElementById('f-plazo').value;
   var estado=document.getElementById('f-est')?document.getElementById('f-est').value:'PENDIENTE';
   var nota=document.getElementById('f-nota').value.trim();
+  var cors=[];
+  var cor1n=(document.getElementById('f-cor1')?document.getElementById('f-cor1').value.trim():'');
+  var cor1c=(document.getElementById('f-cor1-cargo')?document.getElementById('f-cor1-cargo').value.trim():'');
+  var cor2n=(document.getElementById('f-cor2')?document.getElementById('f-cor2').value.trim():'');
+  var cor2c=(document.getElementById('f-cor2-cargo')?document.getElementById('f-cor2-cargo').value.trim():'');
+  if(cor1n){var p1=personas.find(function(x){return x.nombre.toUpperCase()===cor1n.toUpperCase();});cors.push({nombre:cor1n,cargo:cor1c||(p1?p1.cargo:''),cumplimiento:''});}
+  if(cor2n){var p2=personas.find(function(x){return x.nombre.toUpperCase()===cor2n.toUpperCase();});cors.push({nombre:cor2n,cargo:cor2c||(p2?p2.cargo:''),cumplimiento:''});}
   if(!tarea){alert('La tarea es obligatoria');return;}
   var obj;
   if(id){
     var idx=tareas.findIndex(function(x){return x.id===id;});
-    if(idx>=0){tareas[idx]=Object.assign({},tareas[idx],{ips:ips,responsable:resp,cargo:cargo,tarea:tarea,fecha:fecha,plazo:plazo,estado:estado,nota:nota});obj=tareas[idx];}
+    if(idx>=0){tareas[idx]=Object.assign({},tareas[idx],{ips:ips,responsable:resp,cargo:cargo,tarea:tarea,fecha:fecha,plazo:plazo,estado:estado,nota:nota,coresponsables:cors});obj=tareas[idx];}
   } else {
-    obj={id:Date.now(),ips:ips,responsable:resp,cargo:cargo,tarea:tarea,fecha:fecha,plazo:plazo,estado:'PENDIENTE',nota:nota,cumplimiento:'',aplazamientos:0,fecha_nueva:'',hoja:'NUEVA',creado:new Date().toISOString()};
+    obj={id:Date.now(),ips:ips,responsable:resp,cargo:cargo,tarea:tarea,fecha:fecha,plazo:plazo,estado:'PENDIENTE',nota:nota,cumplimiento:'',aplazamientos:0,fecha_nueva:'',hoja:'NUEVA',creado:new Date().toISOString(),coresponsables:cors};
     tareas.push(obj);
   }
   lsS('jc_t',tareas);if(obj)saveTareaSB(obj);closeModal();applyFilters();toast('Tarea guardada','ok');
@@ -847,7 +865,36 @@ function saveTarea(id){
 function marcarCumplida(id){
   var t=tareas.find(function(x){return x.id===id;});if(!t)return;
   if(!confirm('Marcar como finalizada?'))return;
-  t.estado='FINALIZADA';t.cumplimiento='OK';lsS('jc_t',tareas);saveTareaSB(t);applyFilters();toast('Tarea finalizada','ok');
+  t.estado='FINALIZADA';t.cumplimiento='OK';
+  if(t.coresponsables&&t.coresponsables.length)t.coresponsables.forEach(function(c){c.cumplimiento='OK';});
+  lsS('jc_t',tareas);saveTareaSB(t);applyFilters();toast('Tarea finalizada','ok');
+}
+function marcarCumplidaInd(id,ci){
+  var t=tareas.find(function(x){return x.id===id;});if(!t)return;
+  if(ci===-1){
+    if(!confirm('Marcar a '+(t.responsable||'responsable principal')+' como cumplido?'))return;
+    t.cumplimiento='OK';
+  } else {
+    var cor=t.coresponsables&&t.coresponsables[ci];if(!cor)return;
+    if(!confirm('Marcar a '+cor.nombre+' como cumplido?'))return;
+    cor.cumplimiento='OK';
+  }
+  var todos=(t.cumplimiento||'').toLowerCase()==='ok'&&(t.coresponsables||[]).every(function(c){return(c.cumplimiento||'').toLowerCase()==='ok';});
+  if(todos){t.estado='FINALIZADA';}
+  lsS('jc_t',tareas);saveTareaSB(t);closeModal();applyFilters();toast('Cumplimiento registrado','ok');
+  if(!todos)verTarea(id);
+}
+function setupACCor(inpId,lstId,cargoId){
+  var inp=document.getElementById(inpId),lst=document.getElementById(lstId);if(!inp||!lst)return;
+  inp.addEventListener('input',function(){
+    var q=inp.value.toLowerCase().trim();if(q.length<1){lst.style.display='none';return;}
+    var hits=personas.filter(function(p){return p.nombre.toLowerCase().indexOf(q)>=0;}).slice(0,6);
+    if(!hits.length){lst.style.display='none';return;}
+    lst.style.display='block';
+    lst.innerHTML=hits.map(function(p){return'<div class="acitem" data-n="'+p.nombre+'" data-c="'+(p.cargo||'')+'"><div class="acname">'+p.nombre+'</div><div class="acsub">'+(p.cargo||'')+'</div></div>';}).join('');
+    Array.from(lst.querySelectorAll('.acitem')).forEach(function(el){el.onclick=function(){inp.value=el.getAttribute('data-n');var ce=document.getElementById(cargoId);if(ce&&!ce.value)ce.value=el.getAttribute('data-c')||'';lst.style.display='none';};});
+  });
+  document.addEventListener('click',function(e){if(!inp.contains(e.target)&&!lst.contains(e.target))lst.style.display='none';});
 }
 function delTarea(id){
   if(!confirm('Eliminar esta tarea?'))return;
@@ -893,12 +940,34 @@ function verTarea(id){
       '<div><div class="dl-lbl">Dias habiles</div><div class="dl-val">'+(dh!==null?dh+' dias':'-')+'</div></div>'+
       '<div><div class="dl-lbl">Tiempo</div><div class="dl-val">'+drTxt+'</div></div>'+
     '</div>'+
-    (t.nota?'<div style="padding:10px;background:var(--surf2);border-radius:var(--r);font-size:12px;color:var(--txt2);border-left:3px solid var(--bdr2)"><b>Anotaciones:</b> '+t.nota+'</div>':'');
+    (t.nota?'<div style="padding:10px;background:var(--surf2);border-radius:var(--r);font-size:12px;color:var(--txt2);border-left:3px solid var(--bdr2)"><b>Anotaciones:</b> '+t.nota+'</div>':'')+
+    ((curRole==='admin'||curRole==='gerencia')&&(t.coresponsables||[]).length?
+      '<div style="margin-top:12px;padding:10px;background:var(--acc-lt);border-radius:var(--r);border-left:3px solid var(--acc)">'+
+      '<div style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--acc);font-weight:600;margin-bottom:8px">Responsables asignados</div>'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 8px;background:#fff;border-radius:6px">'+
+        '<span class="av" style="background:'+avBg(t.responsable||'')+'">'+initials(t.responsable||'')+'</span>'+
+        '<div style="flex:1"><div style="font-size:12px;font-weight:500">'+(t.responsable||'-')+'</div><div style="font-size:10px;color:var(--txt3)">'+(t.cargo||'Responsable principal')+'</div></div>'+
+        '<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:'+(t.cumplimiento&&t.cumplimiento.toLowerCase()==='ok'?'var(--ok-lt)':'#ebf4ff')+';color:'+(t.cumplimiento&&t.cumplimiento.toLowerCase()==='ok'?'var(--ok)':'var(--acc)')+'">'+
+          (t.cumplimiento&&t.cumplimiento.toLowerCase()==='ok'?'&#10003; Cumplido':'Pendiente')+'</span>'+
+        (!esFin(t)&&!(t.cumplimiento&&t.cumplimiento.toLowerCase()==='ok')?'<button class="ib2 done" onclick="marcarCumplidaInd('+id+',-1)'+'" title="Finalizar" style="font-size:13px">&#10003;</button>':'')+
+      '</div>'+
+      (t.coresponsables||[]).map(function(cor,ci){return(
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 8px;background:#fff;border-radius:6px">'+
+          '<span class="av" style="background:'+avBg(cor.nombre||'')+'">'+initials(cor.nombre||'')+'</span>'+
+          '<div style="flex:1"><div style="font-size:12px;font-weight:500">'+(cor.nombre||'-')+'</div><div style="font-size:10px;color:var(--txt3)">'+(cor.cargo||'-')+'</div></div>'+
+          '<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:'+(cor.cumplimiento&&cor.cumplimiento.toLowerCase()==='ok'?'var(--ok-lt)':'#ebf4ff')+';color:'+(cor.cumplimiento&&cor.cumplimiento.toLowerCase()==='ok'?'var(--ok)':'var(--acc)')+'">'+
+            (cor.cumplimiento&&cor.cumplimiento.toLowerCase()==='ok'?'&#10003; Cumplido':'Pendiente')+'</span>'+
+          (!esFin(t)&&!(cor.cumplimiento&&cor.cumplimiento.toLowerCase()==='ok')?'<button class="ib2 done" onclick="marcarCumplidaInd('+id+','+ci+')" title="Marcar cumplido" style="font-size:13px">&#10003;</button>':'')+
+        '</div>'
+      );}).join('')+
+      '</div>'
+    :'');
   document.getElementById('mfoot').innerHTML='<button class="btn" onclick="closeModal()">Cerrar</button>'+
     '<button class="btn" onclick="closeModal();aplazarTarea('+id+')">Aplazar</button>'+
     '<button class="btn" onclick="closeModal();exportWA('+id+')">WhatsApp</button>'+
-    (!esFin(t)?'<button class="btn suc" onclick="closeModal();marcarCumplida('+id+')">Finalizar</button>':'')+
-    '<button class="btn pri" onclick="closeModal();editTarea('+id+')">Editar</button>';
+    (!esFin(t)&&(curRole==='admin'||curRole==='gerencia')?'<button class="btn suc" onclick="closeModal();marcarCumplida('+id+')">Finalizar todo</button>':'')+
+    (!esFin(t)?'<button class="btn pri" onclick="closeModal();editTarea('+id+')">Editar</button>':
+     '<button class="btn pri" onclick="closeModal();editTarea('+id+')">Editar</button>');
   openModal();
 }
 
