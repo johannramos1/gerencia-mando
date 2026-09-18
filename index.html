@@ -660,7 +660,7 @@ function applyFilters(){
   var act=all.filter(function(t){return !esFin(t);});
   var fin=all.filter(function(t){return esFin(t);});
   if(filtEst!=='todos')act=act.filter(function(t){return t.estado===filtEst;});
-  if(cf)act=act.filter(function(t){return t.responsable===cf;});
+  if(cf)act=act.filter(function(t){return t.responsable===cf||(t.coresponsables||[]).some(function(c){return c.nombre===cf;});});
   if(cff)fin=fin.filter(function(t){return t.responsable===cff;});
   function cmp(a,b){if(sort==='dias_asc'){var da=diasR(a.plazo),db=diasR(b.plazo);return(da===null?9999:da)-(db===null?9999:db);}if(sort==='fecha_desc')return(b.fecha||'').localeCompare(a.fecha||'');if(sort==='fecha_asc')return(a.fecha||'').localeCompare(b.fecha||'');return(a.ips||'').localeCompare(b.ips||'');}
   act.sort(cmp);
@@ -668,7 +668,7 @@ function applyFilters(){
 }
 function popColabFilt(){
   var nA=[],nF=[];
-  tareas.forEach(function(t){if(!esFin(t)&&t.responsable&&nA.indexOf(t.responsable)<0)nA.push(t.responsable);if(esFin(t)&&t.responsable&&nF.indexOf(t.responsable)<0)nF.push(t.responsable);});
+  tareas.forEach(function(t){if(!esFin(t)){if(t.responsable&&nA.indexOf(t.responsable)<0)nA.push(t.responsable);(t.coresponsables||[]).forEach(function(c){if(c.nombre&&nA.indexOf(c.nombre)<0)nA.push(c.nombre);});}else{if(t.responsable&&nF.indexOf(t.responsable)<0)nF.push(t.responsable);(t.coresponsables||[]).forEach(function(c){if(c.nombre&&nF.indexOf(c.nombre)<0)nF.push(c.nombre);});}});
   nA.sort();nF.sort();
   var cf=document.getElementById('colab-filt'),cff=document.getElementById('colab-filt-fin');
   if(cf){var cv=cf.value;cf.innerHTML='<option value="">Todos los colaboradores</option>'+nA.map(function(n){return'<option value="'+n+'"'+(n===cv?' selected':'')+'>'+n+'</option>';}).join('');}
