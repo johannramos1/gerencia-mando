@@ -656,12 +656,12 @@ function applyFilters(){
   var cff=document.getElementById('colab-filt-fin')?document.getElementById('colab-filt-fin').value:'';
   var all=tareas.slice();
   if(filtIPS!=='TODOS')all=all.filter(function(t){return t.ips===filtIPS;});
-  if(q)all=all.filter(function(t){return(t.tarea||'').toLowerCase().indexOf(q)>=0||(t.responsable||'').toLowerCase().indexOf(q)>=0;});
+  if(q)all=all.filter(function(t){return(t.tarea||'').toLowerCase().indexOf(q)>=0||(t.responsable||'').toLowerCase().indexOf(q)>=0||(t.coresponsables||[]).some(function(c){return(c.nombre||'').toLowerCase().indexOf(q)>=0;});});
   var act=all.filter(function(t){return !esFin(t);});
   var fin=all.filter(function(t){return esFin(t);});
   if(filtEst!=='todos')act=act.filter(function(t){return t.estado===filtEst;});
   if(cf)act=act.filter(function(t){return t.responsable===cf||(t.coresponsables||[]).some(function(c){return c.nombre===cf;});});
-  if(cff)fin=fin.filter(function(t){return t.responsable===cff;});
+  if(cff)fin=fin.filter(function(t){return t.responsable===cff||(t.coresponsables||[]).some(function(c){return c.nombre===cff;});});
   function cmp(a,b){if(sort==='dias_asc'){var da=diasR(a.plazo),db=diasR(b.plazo);return(da===null?9999:da)-(db===null?9999:db);}if(sort==='fecha_desc')return(b.fecha||'').localeCompare(a.fecha||'');if(sort==='fecha_asc')return(a.fecha||'').localeCompare(b.fecha||'');return(a.ips||'').localeCompare(b.ips||'');}
   act.sort(cmp);
   renderKPI(all);renderAct(act);renderFin(fin);updBadges();popColabFilt();
@@ -949,7 +949,7 @@ function verTarea(id){
         '<div style="flex:1"><div style="font-size:12px;font-weight:500">'+(t.responsable||'-')+'</div><div style="font-size:10px;color:var(--txt3)">'+(t.cargo||'Responsable principal')+'</div></div>'+
         '<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:'+(t.cumplimiento&&t.cumplimiento.toLowerCase()==='ok'?'var(--ok-lt)':'#ebf4ff')+';color:'+(t.cumplimiento&&t.cumplimiento.toLowerCase()==='ok'?'var(--ok)':'var(--acc)')+'">'+
           (t.cumplimiento&&t.cumplimiento.toLowerCase()==='ok'?'&#10003; Cumplido':'Pendiente')+'</span>'+
-        (!esFin(t)&&!(t.cumplimiento&&t.cumplimiento.toLowerCase()==='ok')?'<button class="ib2 done" onclick="marcarCumplidaInd('+id+',-1)'+'" title="Finalizar" style="font-size:13px">&#10003;</button>':'')+
+        (!esFin(t)&&!(t.cumplimiento&&t.cumplimiento.toLowerCase()==='ok')?'<button class="ib2 done" onclick="marcarCumplidaInd('+id+',-1)" title="Finalizar" style="font-size:13px">&#10003;</button>':'')+
       '</div>'+
       (t.coresponsables||[]).map(function(cor,ci){return(
         '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 8px;background:#fff;border-radius:6px">'+
@@ -966,8 +966,7 @@ function verTarea(id){
     '<button class="btn" onclick="closeModal();aplazarTarea('+id+')">Aplazar</button>'+
     '<button class="btn" onclick="closeModal();exportWA('+id+')">WhatsApp</button>'+
     (!esFin(t)&&(curRole==='admin'||curRole==='gerencia')?'<button class="btn suc" onclick="closeModal();marcarCumplida('+id+')">Finalizar todo</button>':'')+
-    (!esFin(t)?'<button class="btn pri" onclick="closeModal();editTarea('+id+')">Editar</button>':
-     '<button class="btn pri" onclick="closeModal();editTarea('+id+')">Editar</button>');
+
   openModal();
 }
 
@@ -977,7 +976,8 @@ function exportWA(id){
   var dh=diasH(t.fecha,t.plazo);
   var p=pByName(t.responsable)||{};
   var cargo=t.cargo||p.cargo||'';
-    var lines=['---','DIRECTRIZ DE GERENCIA','---','IPS: '+(t.ips||'-'),'Para: '+(t.responsable||'-')+(cargo?' - '+cargo:''),'---','TAREA ASIGNADA:',t.tarea||'-','---','Fecha de asignacion: '+fDate(t.fecha),'Plazo de entrega: '+(fDate(t.plazo)||'Por definir'),'Dias habiles: '+(dh!==null?dh+' dias':'-'),'---','Dra. Jenifer Cleves Grijalba','Gerencia General'];
+    var corLines=(t.coresponsables||[]).map(function(c){return'Tambien: '+(c.nombre||'-')+(c.cargo?' - '+c.cargo:'');});
+  var lines=['---','DIRECTRIZ DE GERENCIA','---','IPS: '+(t.ips||'-'),'Para: '+(t.responsable||'-')+(cargo?' - '+cargo:'')].concat(corLines).concat(['---','TAREA ASIGNADA:',t.tarea||'-','---','Fecha de asignacion: '+fDate(t.fecha),'Plazo de entrega: '+(fDate(t.plazo)||'Por definir'),'Dias habiles: '+(dh!==null?dh+' dias':'-'),'---','Dra. Jenifer Cleves Grijalba','Gerencia General']);
   var txt=lines.join('\n');
   window._waTxt=txt;
   document.getElementById('mtitle').textContent='Exportar para WhatsApp';
